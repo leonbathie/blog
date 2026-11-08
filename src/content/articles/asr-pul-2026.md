@@ -2,6 +2,7 @@
 title: "Scaling Pulaar & Wolof Speech-to-Text : Fine-Tuning Whisper sous contraintes acoustiques réelles"
 date: "2026-10"
 category: speech-ai
+icon: mic
 tag: "SPEECH AI & LOW-RESOURCE NLP"
 readTime: 9
 abstract: >-

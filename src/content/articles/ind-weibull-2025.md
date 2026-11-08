@@ -2,6 +2,7 @@
 title: "Optimisation Stochastique MTBF/MTTR par Loi de Weibull & Automatisation GMAO"
 date: "2025-12"
 category: industrial
+icon: gear
 tag: "IND-GMAO // H&D MADAR & IBS SÉNÉGAL"
 abstract: >-
   Ingénierie de fiabilité appliquée aux lignes d'embouteillage et équipements électromécaniques :

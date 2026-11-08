@@ -161,7 +161,8 @@ export function createGame() {
 
   function die() {
     state.lives -= 1
-    state.events.push({ type: 'die' })
+    const p = state.player
+    state.events.push({ type: 'die', x: p.x + p.w / 2, y: p.y + p.h / 2 })
     if (state.lives <= 0) {
       state.phase = 'over'
       state.message = 'Réseau hors tension'
@@ -278,7 +279,7 @@ export function createGame() {
       buffer = 0
       coyote = 0
       holdTimer = 12
-      state.events.push({ type: 'jump' })
+      state.events.push({ type: 'jump', x: p.x + p.w / 2, y: p.y + p.h })
     }
     // Relâcher tôt écourte le saut
     if (holdTimer > 0) {
@@ -297,6 +298,7 @@ export function createGame() {
 
     const previousBottom = p.y + p.h
     const wasOnGround = p.onGround
+    const fallSpeed = p.vy
     p.onGround = false
     if (moveAxis(p, 0, p.vy)) {
       if (p.vy > 0) p.onGround = true
@@ -306,6 +308,8 @@ export function createGame() {
       p.onGround = true
     }
     if (wasOnGround && !p.onGround && p.vy >= 0) coyote = COYOTE
+    // Atterrissage : poussière et tassement, proportionnels à la vitesse de chute
+    if (!wasOnGround && p.onGround) state.events.push({ type: 'land', x: p.x + p.w / 2, y: p.y + p.h, speed: fallSpeed })
 
     p.anim += Math.abs(p.vx)
 
@@ -321,7 +325,7 @@ export function createGame() {
       chip.taken = true
       state.chipsLeft -= 1
       state.score += SCORE.chip
-      state.events.push({ type: 'chip' })
+      state.events.push({ type: 'chip', x: chip.x + chip.w / 2, y: chip.y + chip.h / 2 })
     }
 
     /* ---- Surtensions ---- */
@@ -352,7 +356,7 @@ export function createGame() {
         p.vy = STOMP_BOUNCE
         p.onGround = false
         state.score += SCORE.stomp
-        state.events.push({ type: 'stomp' })
+        state.events.push({ type: 'stomp', x: w.x + w.w / 2, y: w.y + w.h / 2 })
       } else {
         die()
         return state

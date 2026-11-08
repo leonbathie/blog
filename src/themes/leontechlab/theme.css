@@ -523,6 +523,13 @@ html[data-theme='leontechlab'] body {
 .leon-cmd-dim {
   color: rgb(var(--leon-dim));
 }
+.leon-cmd-warn {
+  color: rgb(var(--leon-gold));
+}
+.leon-cmd-chips .leon-btn:disabled {
+  color: rgb(var(--leon-dim));
+  cursor: progress;
+}
 .leon-cmd-input {
   flex: 1 1 auto;
   min-width: 0;

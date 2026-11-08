@@ -77,8 +77,14 @@ donc à un seul endroit et profite à toutes les formes.
 ### « Arcade 221 », le jeu de la forme Monographie
 
 Un vrai jeu de plateforme, terminable : quatre salles, trois vies, un terminal à
-atteindre dans chacune. Clavier (flèches ou A/D, Espace, P, R) et commandes
-tactiles sur téléphone. Il vit dans `src/themes/monographie/game/` :
+atteindre dans chacune. Au clavier : flèches ou A/D, Espace, P (pause), R
+(recommencer), F (plein écran). Au doigt, tout se joue sur l'image : la moitié
+gauche fait courir (vers le côté où l'on appuie, glisser fait demi-tour), la
+moitié droite fait sauter (maintenir saute plus haut) ; un appui sur un écran
+de titre ou de pause le valide, et le tableau de bord a ses boutons pause et
+plein écran. Les touches ◀ ▶ SAUT restent sous l'image. Le téléphone vibre
+brièvement aux sauts, aux puces et aux chutes. Il vit dans
+`src/themes/monographie/game/` :
 
 ```
 levels.js   les salles, posées par coordonnée, + validateLevels()
@@ -87,7 +93,9 @@ render.js   le dessin sur canevas, 480 × 272 pixels logiques agrandis
 ```
 
 Le moteur ne touche ni au DOM ni au canevas, et il est **déterministe** : à
-entrées égales, la partie se déroule toujours pareil. C'est ce qui permet de la
+entrées égales, la partie se déroule toujours pareil. Les effets (poussière à
+l'atterrissage, étincelles, secousse, tassement du personnage, faisceau du
+terminal) sont dans `render.js` et ne lisent que les événements du moteur. C'est ce qui permet de la
 faire jouer par un robot et de vérifier qu'elle reste finissable après chaque
 modification de salle.
 
@@ -208,7 +216,7 @@ abstract: >-
   Résumé affiché dans la liste et en tête de l'article.
 metrics: "WER -34.2% | Dataset: AudioSheet IA"   # optionnel
 lab: pulaar                   # optionnel : weibull | pulaar | glitch — ajoute un lien vers le simulateur
-icon: globe                   # optionnel : vignette de la forme LeonTechLab — computer | satellite | globe | gear
+icon: mic                     # optionnel : vignette LeonTechLab — computer | satellite | globe | gear | chip | mic | factory | phone | network | rocket
 readTime: 9                   # optionnel : sinon estimé automatiquement
 draft: false                  # true = non publié
 bibtex: |
@@ -254,6 +262,17 @@ Tout ce qui n'est pas traduit reste en français. Un article dont le fichier ang
 qu'un en-tête garde son texte français, et la page le signale au lecteur. Les textes
 d'interface sont dans `src/themes/leontechlab/i18n.js`. Les autres formes restent en
 français.
+
+### L'invite de commande (forme LeonTechLab)
+
+Ctrl+K, ou le `C:\>` de la barre du bas, ouvre une invite : `help`, `dir`, `open 3`,
+`search weibull`, `cd projets`, `lang en`, `theme 2`, `launch`… `install python` **simule**
+une installation (résolution, téléchargement avec barre de progression, vérification,
+étapes), puis `python --version` répond et `python` ouvre un petit interpréteur
+(`src/themes/leontechlab/pyrepl.js` : nombres, chaînes, listes, variables, `print()`).
+`pip`, `npm`, `apt`, `winget`, `brew`, `sudo` et `ping` impriment leur sortie habituelle.
+Rien n'est téléchargé ni installé pour de vrai : la liste des « programmes installés »
+vit dans le navigateur (`installed`, `uninstall`). Ctrl+C interrompt.
 
 ---
 

@@ -2,6 +2,7 @@
 title: "Injection de Fautes Électromagnétiques (EMFI) & Voltage Glitching sur Bootloaders Industriels"
 date: "2026-10"
 category: security
+icon: chip
 tag: "SEC-HW // FAULTY CAT & ARM CORTEX-M"
 abstract: >-
   Modélisation physique et caractérisation temporelle des impulsions de sous-tension (Faulty Cat)

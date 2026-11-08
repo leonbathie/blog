@@ -2,7 +2,7 @@
 title: "Sécurité Offensive Hybride : Agents MCP autonomes et Injection de Fautes Matérielles (Faulty Cat)"
 date: "2026-06"
 category: security
-icon: computer
+icon: network
 tag: "OFFENSIVE SECURITY & HARDWARE GLITCHING"
 readTime: 11
 abstract: >-
