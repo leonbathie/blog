@@ -527,6 +527,7 @@ const DICT = {
       mission: ['Mission Control', 'Flight control station: orbital radar, telemetry, MCP swarm and mission terminal.'],
       crt: ['CRT', 'Cathode-ray tube: cyan phosphor, scanlines, character rain and mission terminal.'],
       leontechlab: ['LeonTechLab', 'Retro console: green phosphor screen, ">>" menus, pixel-art lunar banner and cyan titles.'],
+      evolution: ['Evolution', "Web time machine: the same page from 1991 to 2050, in each era's browser."],
     },
   },
 }

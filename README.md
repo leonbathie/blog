@@ -10,7 +10,7 @@ src/themes/       les « formes » du blog                  — une par apparenc
 src/core/         le socle partagé (Markdown+formules, formes, labos, audio, horloge)
 ```
 
-Six formes existent aujourd'hui :
+Sept formes existent aujourd'hui :
 
 | № | Forme               | Apparence                                                                     |
 |---|---------------------|-------------------------------------------------------------------------------|
@@ -20,6 +20,7 @@ Six formes existent aujourd'hui :
 | 4 | `mission`           | Contrôle de mission : radar orbital, télémétrie, essaim MCP, terminal Ctrl+K  |
 | 5 | `crt`               | Tube cathodique : phosphore cyan, lignes de balayage, pluie de caractères     |
 | 6 | `leontechlab`       | Console rétro bilingue FR/EN : bandeau lunaire en pixel art, invite de commande |
+| 7 | `evolution`         | Machine à remonter le Web : la même page de 1991 à 2050, dans le navigateur de chaque époque |
 
 Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
 `src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
@@ -260,8 +261,34 @@ src/content/projects.en.js              dépôts, systèmes et nœuds de calcul
 
 Tout ce qui n'est pas traduit reste en français. Un article dont le fichier anglais n'a
 qu'un en-tête garde son texte français, et la page le signale au lecteur. Les textes
-d'interface sont dans `src/themes/leontechlab/i18n.js`. Les autres formes restent en
-français.
+d'interface sont dans `src/themes/leontechlab/i18n.js`. La forme Évolution suit aussi la
+langue de l'appareil (voir plus bas). Les autres formes restent en français.
+
+### La forme Évolution (1991 → 2050)
+
+Un bandeau en pixel art (salle de contrôle, Terre et satellite), une frise de sept
+époques, et la **même page du blog** affichée dans le navigateur de l'époque choisie :
+
+| Époque      | Nom                 | Navigateur et page                                          |
+|-------------|---------------------|-------------------------------------------------------------|
+| 1991 – 1999 | Web 1.0             | Netscape Navigator : barre noire, Afrique en ASCII, compteur |
+| 2000 – 2009 | Web 2.0             | Firefox sous Windows XP : blog à catégories, flux RSS       |
+| 2010 – 2019 | Mobile & Cloud      | Onglets modernes : héros et cartes                          |
+| 2020 – 2029 | IA Générative       | Arc : LLM, parole, traduction                               |
+| 2030 – 2039 | AR/VR & Robotique   | Interface immersive : jumeaux numériques                    |
+| 2040 – 2049 | AGI & Spatial       | Interface orbitale : agents et recherche ouverte            |
+| 2050        | AI × Space × Africa | LeonTechLab 2050                                            |
+
+On change d'époque par la frise (flèches gauche / droite au clavier) ou en touchant une
+des six vignettes ; le choix est mémorisé. Toutes les adresses du blog marchent dans
+chaque époque, et la barre d'adresse les écrit à la façon de l'époque
+(`notes/index.html` en 1995, `/archives/` en 2005, `/labo/weibull` ensuite). Les boutons
+Précédent, Suivant, Accueil, Actualiser et Arrêter fonctionnent.
+
+Le cadre (frise, pied de page) suit la langue de l'appareil, avec un bouton **FR | EN**
+en bas de page. En français, chaque époque garde la langue de la maquette : anglais pour
+1991, 2005 et 2050, français pour les autres. En anglais, tout passe en anglais. Les
+époques, leurs couleurs et leurs textes sont dans `src/themes/evolution/eras.js`.
 
 ### L'invite de commande (forme LeonTechLab)
 
