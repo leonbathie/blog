@@ -182,5 +182,6 @@ git commit -m "Nouvelle forme : …"
 git push
 ```
 
-Voir [.github/workflows/](.github/workflows/) pour le détail, et la section
-« Secrets » de ce même dossier pour les variables attendues.
+Procédure complète (clé SSH, secrets, Nginx, HTTPS) : **[deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md)**.
+Configuration Nginx prête à installer : [deploy/nginx.example.conf](deploy/nginx.example.conf).
+Workflows : [.github/workflows/](.github/workflows/).
