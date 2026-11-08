@@ -53,4 +53,14 @@ export const themes = [
     integratedSwitcher: true,
     load: () => import('./mission/Theme.vue'),
   },
+  {
+    id: 'crt',
+    name: 'CRT',
+    date: '2026-11',
+    summary: 'Tube cathodique : phosphore cyan, lignes de balayage, pluie de caractères et terminal de mission.',
+    fonts:
+      'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&display=swap',
+    integratedSwitcher: true,
+    load: () => import('./crt/Theme.vue'),
+  },
 ]

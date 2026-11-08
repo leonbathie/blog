@@ -10,7 +10,7 @@ src/themes/       les « formes » du blog                  — une par apparenc
 src/core/         le socle partagé (Markdown+formules, formes, labos, audio, horloge)
 ```
 
-Quatre formes existent aujourd'hui :
+Cinq formes existent aujourd'hui :
 
 | № | Forme               | Apparence                                                                     |
 |---|---------------------|-------------------------------------------------------------------------------|
@@ -18,6 +18,7 @@ Quatre formes existent aujourd'hui :
 | 2 | `cyberdeck`         | Poste de pilotage spatial : noyau WebGL Three.js, labo cyber, arène           |
 | 3 | `planche`           | Planche de bureau d'études : papier millimétré, cartouche, tirage ou cyanotype |
 | 4 | `mission`           | Contrôle de mission : radar orbital, télémétrie, essaim MCP, terminal Ctrl+K  |
+| 5 | `crt`               | Tube cathodique : phosphore cyan, lignes de balayage, pluie de caractères     |
 
 Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
 `src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
@@ -71,6 +72,26 @@ Les **simulateurs du laboratoire** suivent la même règle : leurs formules, seu
 d'essai vivent dans `src/core/lab-math.js`, et chaque forme n'écrit que sa présentation
 (courbe, chronogramme, tableau…). Une correction de physique ou de linguistique se fait
 donc à un seul endroit et profite à toutes les formes.
+
+### Deux formes qui partagent leur ossature
+
+`mission` et `crt` sont la même application sous deux peaux. Tout vit dans
+`src/themes/_terminal/` (le `_` indique que ce n'est pas une forme) : composant racine
+`Shell.vue`, vues et simulateurs. Aucune couleur ni police n'y est écrite en dur — tout
+passe par les variables `--term-*`, définies dans `_terminal/base.css` et **valorisées**
+par chaque forme.
+
+Une forme de ce type tient alors en trois petits fichiers :
+
+```
+src/themes/<ma-peau>/
+  theme.css   ← les variables --term-* (couleurs, polices) et ses rares règles propres
+  skin.js     ← les libellés (barre d'état, onglets, boutons) et le fond animé
+  Theme.vue   ← <Shell :skin="MA_PEAU" />
+```
+
+Résultat au build : un tronc commun de ~38 Ko, et **2,5 Ko par peau**.
+Si une nouvelle maquette reprend cette ossature, elle coûte une peau, pas une copie.
 
 ### 3. Réagir à l'URL
 

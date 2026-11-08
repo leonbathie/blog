@@ -1,0 +1,235 @@
+/* =====================================================================
+   Socle commun aux formes « console » (Mission Control, CRT).
+   Ce fichier ne contient AUCUNE couleur ni police en dur : tout passe par
+   les variables --term-*, que chaque peau définit dans son propre theme.css.
+   Ajouter une peau = un fichier de variables, pas une copie des composants.
+   ===================================================================== */
+
+.theme-terminal ::selection {
+  background-color: rgb(var(--term-accent));
+  color: rgb(var(--term-void));
+}
+
+.theme-terminal :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid rgb(var(--term-accent));
+  outline-offset: 2px;
+}
+
+/* ---------- Fond animé (radar, pluie de caractères…) ---------- */
+.term-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--term-backdrop-opacity, 0.25);
+}
+
+/* ---------- Panneau vitré ---------- */
+.term-card {
+  background: linear-gradient(135deg, rgb(var(--term-panel-a) / 0.9) 0%, rgb(var(--term-panel-b) / 0.95) 100%);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgb(var(--term-accent) / 0.3);
+  box-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.5);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.term-card:hover {
+  border-color: rgb(var(--term-accent) / 0.7);
+  box-shadow: 0 0 30px rgb(var(--term-accent) / 0.2);
+}
+/* Un panneau sélectionné ne doit pas « s'éteindre » au survol d'un autre */
+.term-card-on,
+.term-card-on:hover {
+  border-color: rgb(var(--term-accent));
+  background: rgb(var(--term-accent) / 0.1);
+  box-shadow: 0 0 20px rgb(var(--term-accent) / 0.2);
+}
+
+.term-glow {
+  text-shadow: 0 0 15px rgb(var(--term-accent) / 0.6);
+}
+.term-modal-glow {
+  box-shadow: 0 0 50px rgb(var(--term-accent) / 0.3);
+}
+
+/* ---------- Boutons ----------
+   Spécificité normale (et non :where) : le preflight de Tailwind impose
+   `button { font-family: inherit; text-transform: none; font-size: 100% }`
+   à 0,0,1, ce qui écraserait une règle à spécificité nulle — les
+   <a class="term-btn"> resteraient stylés et les <button> non. */
+.term-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  font-family: var(--term-font-mono), monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: rgb(var(--term-ink));
+  background: linear-gradient(135deg, rgb(var(--term-panel-a) / 0.9) 0%, rgb(var(--term-panel-b) / 0.95) 100%);
+  border: 1px solid rgb(var(--term-accent) / 0.3);
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.term-btn:hover {
+  color: rgb(var(--term-accent));
+  border-color: rgb(var(--term-accent) / 0.5);
+}
+.term-btn-on,
+.term-btn-on:hover {
+  color: rgb(var(--term-void));
+  font-weight: 700;
+  background: linear-gradient(to right, rgb(var(--term-accent)), rgb(var(--term-accent-dk)));
+  border-color: transparent;
+  box-shadow: 0 10px 15px -3px rgb(var(--term-accent) / 0.2);
+}
+.term-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- Champs ---------- */
+.term-field {
+  width: 100%;
+  padding: 0.7rem;
+  background: rgb(var(--term-void));
+  border: 1px solid rgb(var(--term-accent) / 0.4);
+  color: rgb(var(--term-accent-lt));
+  font-family: var(--term-font-mono), monospace;
+  font-size: 0.75rem;
+}
+.term-field:focus {
+  outline: none;
+  border-color: rgb(var(--term-accent) / 0.9);
+}
+
+/* Curseurs : rail fin, pastille carrée à l'accent */
+.theme-terminal input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  background: transparent;
+  cursor: pointer;
+}
+.theme-terminal input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: rgb(var(--term-accent) / 0.35);
+}
+.theme-terminal input[type='range']::-moz-range-track {
+  height: 2px;
+  background: rgb(var(--term-accent) / 0.35);
+}
+.theme-terminal input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -5px;
+  border-radius: 0;
+  background: rgb(var(--term-accent));
+  box-shadow: 0 0 10px rgb(var(--term-accent) / 0.8);
+}
+.theme-terminal input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 0;
+  background: rgb(var(--term-accent));
+  box-shadow: 0 0 10px rgb(var(--term-accent) / 0.8);
+}
+
+/* ---------- Console ---------- */
+.term-console {
+  background: rgb(var(--term-void));
+  border: 1px solid rgb(var(--term-accent) / 0.3);
+  font-family: var(--term-font-mono), monospace;
+  font-size: 0.72rem;
+  line-height: 1.7;
+  color: rgb(var(--term-accent));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---------- Ascenseur ---------- */
+.theme-terminal ::-webkit-scrollbar { width: 5px; height: 5px; }
+.theme-terminal ::-webkit-scrollbar-track { background: rgb(var(--term-bg)); }
+.theme-terminal ::-webkit-scrollbar-thumb { background: rgb(var(--term-accent)); border-radius: 2px; }
+
+/* ---------- Corps des articles (Markdown) ---------- */
+.term-prose {
+  font-family: var(--term-font-body), sans-serif;
+  font-size: 0.93rem;
+  line-height: 1.8;
+  color: rgb(var(--term-dim));
+  overflow-wrap: anywhere;
+}
+.term-prose :is(pre, .katex, .katex-display) { overflow-wrap: normal; }
+.term-prose > * + * { margin-top: 1rem; }
+.term-prose :is(h2, h3, h4) {
+  font-family: var(--term-font-display), sans-serif;
+  font-weight: 700;
+  line-height: 1.3;
+  color: rgb(var(--term-head));
+  margin-top: 1.9rem;
+}
+.term-prose h2 { font-size: 1.15rem; }
+.term-prose h3 { font-size: 1rem; }
+.term-prose h4 { font-size: 0.93rem; }
+.term-prose strong { color: rgb(var(--term-head)); font-weight: 600; }
+.term-prose a {
+  color: rgb(var(--term-accent));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.term-prose ul { list-style: square; padding-left: 1.2rem; }
+.term-prose ol { list-style: decimal; padding-left: 1.2rem; }
+.term-prose blockquote {
+  border-left: 3px solid rgb(var(--term-accent));
+  padding-left: 1rem;
+  color: rgb(var(--term-faint));
+}
+.term-prose :not(pre) > code {
+  font-family: var(--term-font-mono), monospace;
+  font-size: 0.88em;
+  padding: 0.1em 0.35em;
+  background: rgb(var(--term-void));
+  border: 1px solid rgb(var(--term-accent) / 0.3);
+  color: rgb(var(--term-accent-lt));
+}
+.term-prose pre {
+  padding: 0.9rem;
+  background: rgb(var(--term-void));
+  border: 1px solid rgb(var(--term-accent) / 0.3);
+  color: rgb(var(--term-ink));
+  font: 0.73rem/1.6 var(--term-font-mono), monospace;
+  overflow-x: auto;
+}
+.term-prose .math-block {
+  padding: 0.85rem 1rem;
+  background: rgb(var(--term-void));
+  border: 1px solid rgb(var(--term-accent) / 0.3);
+  color: rgb(var(--term-accent));
+  overflow-x: auto;
+}
+
+.theme-terminal .katex { font-size: 1.02em; }
+/* Les en-têtes de console sont en capitales ; jamais les formules. */
+.theme-terminal .katex { text-transform: none; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 639px) {
+  .term-btn { min-height: 2.75rem; padding: 0.6rem 0.9rem; }
+}
+
+/* ---------- Mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .theme-terminal *,
+  .theme-terminal *::before,
+  .theme-terminal *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

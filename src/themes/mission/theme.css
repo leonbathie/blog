@@ -1,250 +1,59 @@
 /* =====================================================================
    Forme 4 — « Mission Control »
-   Poste de contrôle de vol : fond quasi noir, trame orbitale, accent orange,
-   panneaux vitrés et radar balayant l'arrière-plan.
+   Peau du socle commun (src/themes/_terminal/) : poste de contrôle de vol,
+   accent orange, panneaux vitrés, radar balayant l'arrière-plan.
    Portée depuis la maquette « NASA Mission Control & Deep Space Cyber Lab ».
+
+   Ce fichier ne contient que des variables : toute la structure vit dans
+   _terminal/base.css, partagée avec la forme « CRT ».
    ===================================================================== */
 
 html[data-theme='mission'] {
-  --ms-bg: #07090e;
-  --ms-orange: 249 115 22;
-  --ms-amber: 251 191 36;
-  --ms-blue: 56 189 248;
+  --term-bg: 7 9 14;
+  --term-void: 0 0 0;
+
+  --term-accent: 249 115 22; /* orange */
+  --term-accent-lt: 253 186 116;
+  --term-accent-dk: 217 119 6;
+  --term-accent2: 251 191 36; /* ambre */
+  --term-info: 56 189 248; /* ciel */
+  --term-ok: 52 211 153;
+  --term-alert: 251 113 133;
+  --term-extra: 167 139 250;
+
+  --term-head: 255 255 255;
+  --term-ink: 226 232 240;
+  --term-dim: 203 213 225;
+  --term-faint: 100 116 139;
+  --term-line: 51 65 85;
+
+  --term-panel-a: 22 27 34;
+  --term-panel-b: 13 17 23;
+
+  --term-font-display: Orbitron;
+  --term-font-mono: 'Share Tech Mono';
+  --term-font-body: 'Space Grotesk';
+
   color-scheme: dark;
   scroll-behavior: smooth;
 }
 
 html[data-theme='mission'] body {
-  background-color: var(--ms-bg);
-  color: #e2e8f0;
+  background-color: rgb(var(--term-bg));
+  color: rgb(var(--term-ink));
   /* Halo central + trame orbitale de 40 px, comme sur la maquette */
   background-image:
-    radial-gradient(circle at 50% 50%, rgb(var(--ms-orange) / 0.03) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, rgb(var(--term-accent) / 0.03) 0%, transparent 60%),
     linear-gradient(rgb(255 255 255 / 0.01) 1px, transparent 1px),
     linear-gradient(90deg, rgb(255 255 255 / 0.01) 1px, transparent 1px);
   background-size: 100% 100%, 40px 40px, 40px 40px;
   background-attachment: fixed;
 }
 
-.theme-mission ::selection {
-  background-color: rgb(var(--ms-orange));
-  color: #000;
-}
-
-.theme-mission :is(button, a, input, select, textarea, summary):focus-visible {
-  outline: 2px solid rgb(var(--ms-orange));
-  outline-offset: 2px;
-}
-
-/* ---------- Radar d'arrière-plan ---------- */
-.ms-radar {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.25;
-}
-
-/* ---------- Panneau vitré ---------- */
-.ms-card {
-  background: linear-gradient(135deg, rgb(22 27 34 / 0.9) 0%, rgb(13 17 23 / 0.95) 100%);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgb(var(--ms-orange) / 0.3);
-  box-shadow: 0 8px 32px 0 rgb(0 0 0 / 0.5);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.ms-card:hover {
-  border-color: rgb(var(--ms-orange) / 0.7);
-  box-shadow: 0 0 30px rgb(var(--ms-orange) / 0.2);
-}
-/* Un panneau sélectionné ne doit pas « s'éteindre » au survol d'un autre */
-.ms-card-on,
-.ms-card-on:hover {
-  border-color: rgb(var(--ms-orange));
-  background: rgb(var(--ms-orange) / 0.1);
-  box-shadow: 0 0 20px rgb(var(--ms-orange) / 0.2);
-}
-
-.ms-glow {
-  text-shadow: 0 0 15px rgb(var(--ms-orange) / 0.6);
-}
-
-/* ---------- Boutons ----------
-   Spécificité normale (et non :where) : le preflight de Tailwind impose
-   `button { font-family: inherit; text-transform: none }` à 0,0,1. */
-.ms-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.6rem 1.25rem;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  color: #cbd5e1;
-  background: linear-gradient(135deg, rgb(22 27 34 / 0.9) 0%, rgb(13 17 23 / 0.95) 100%);
-  border: 1px solid rgb(var(--ms-orange) / 0.3);
-  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
-}
-.ms-btn:hover {
-  color: rgb(var(--ms-orange));
-  border-color: rgb(var(--ms-orange) / 0.5);
-}
-/* Bouton engagé : dégradé orange, texte noir — la signature de la maquette */
-.ms-btn-on,
-.ms-btn-on:hover {
-  color: #000;
-  font-weight: 700;
-  background: linear-gradient(to right, #f97316, #d97706);
-  border-color: transparent;
-  box-shadow: 0 10px 15px -3px rgb(var(--ms-orange) / 0.2);
-}
-
-/* ---------- Champs ---------- */
-.ms-field {
-  width: 100%;
-  padding: 0.7rem;
-  background: #000;
-  border: 1px solid rgb(var(--ms-orange) / 0.4);
-  color: #fed7aa;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.75rem;
-}
-.ms-field:focus {
-  outline: none;
-  border-color: rgb(var(--ms-orange) / 0.9);
-}
-
-/* Curseurs : rail fin, pastille carrée orange */
-.theme-mission input[type='range'] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 18px;
-  background: transparent;
-  cursor: pointer;
-}
-.theme-mission input[type='range']::-webkit-slider-runnable-track {
-  height: 2px;
-  background: rgb(var(--ms-orange) / 0.35);
-}
-.theme-mission input[type='range']::-moz-range-track {
-  height: 2px;
-  background: rgb(var(--ms-orange) / 0.35);
-}
-.theme-mission input[type='range']::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  margin-top: -5px;
-  border-radius: 0;
-  background: rgb(var(--ms-orange));
-  box-shadow: 0 0 10px rgb(var(--ms-orange) / 0.8);
-}
-.theme-mission input[type='range']::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border: 0;
-  border-radius: 0;
-  background: rgb(var(--ms-orange));
-  box-shadow: 0 0 10px rgb(var(--ms-orange) / 0.8);
-}
-
-/* ---------- Console de mission ---------- */
-.ms-console {
-  background: #000;
-  border: 1px solid rgb(var(--ms-orange) / 0.3);
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.72rem;
-  line-height: 1.7;
-  color: rgb(var(--ms-orange));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-/* ---------- Ascenseur ---------- */
-.theme-mission ::-webkit-scrollbar { width: 5px; height: 5px; }
-.theme-mission ::-webkit-scrollbar-track { background: #07090e; }
-.theme-mission ::-webkit-scrollbar-thumb { background: rgb(var(--ms-orange)); border-radius: 2px; }
-
-/* ---------- Corps des articles (Markdown) ---------- */
-.ms-prose {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 0.93rem;
-  line-height: 1.8;
-  color: #cbd5e1;
-  overflow-wrap: anywhere;
-}
-.ms-prose :is(pre, .katex, .katex-display) { overflow-wrap: normal; }
-.ms-prose > * + * { margin-top: 1rem; }
-.ms-prose :is(h2, h3, h4) {
-  font-family: Orbitron, sans-serif;
-  font-weight: 700;
-  line-height: 1.3;
-  color: #fff;
-  margin-top: 1.9rem;
-}
-.ms-prose h2 { font-size: 1.15rem; }
-.ms-prose h3 { font-size: 1rem; }
-.ms-prose h4 { font-size: 0.93rem; }
-.ms-prose strong { color: #fff; font-weight: 600; }
-.ms-prose a {
-  color: rgb(var(--ms-orange));
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.ms-prose ul { list-style: square; padding-left: 1.2rem; }
-.ms-prose ol { list-style: decimal; padding-left: 1.2rem; }
-.ms-prose blockquote {
-  border-left: 3px solid rgb(var(--ms-orange));
-  padding-left: 1rem;
-  color: #94a3b8;
-}
-.ms-prose :not(pre) > code {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 0.88em;
-  padding: 0.1em 0.35em;
-  background: #000;
-  border: 1px solid rgb(var(--ms-orange) / 0.3);
-  color: #fdba74;
-}
-.ms-prose pre {
-  padding: 0.9rem;
-  background: #000;
-  border: 1px solid rgb(var(--ms-orange) / 0.3);
-  color: #e2e8f0;
-  font: 0.73rem/1.6 'Share Tech Mono', monospace;
-  overflow-x: auto;
-}
-.ms-prose .math-block {
-  padding: 0.85rem 1rem;
-  background: #000;
-  border: 1px solid rgb(var(--ms-orange) / 0.3);
-  color: rgb(var(--ms-orange));
-  overflow-x: auto;
-}
-.theme-mission .katex { font-size: 1.02em; }
-/* Les en-têtes de mission sont en capitales ; jamais les formules. */
-.theme-mission .katex { text-transform: none; }
-
-/* ---------- Mobile ---------- */
 @media (max-width: 639px) {
-  .ms-btn { min-height: 2.75rem; padding: 0.6rem 0.9rem; }
   html[data-theme='mission'] body { background-attachment: scroll; }
 }
 
-/* ---------- Mouvement réduit ----------
-   Le balayage radar et les anneaux du scanner s'arrêtent. */
 @media (prefers-reduced-motion: reduce) {
   html[data-theme='mission'] { scroll-behavior: auto; }
-  .theme-mission *,
-  .theme-mission *::before,
-  .theme-mission *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
 }

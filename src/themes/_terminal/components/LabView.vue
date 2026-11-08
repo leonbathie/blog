@@ -5,9 +5,11 @@ import LabSwarm from './LabSwarm.vue'
 import LabPqc from './LabPqc.vue'
 import LabOrbit from './LabOrbit.vue'
 
-/** [LOG 03] — Labo orbital : un module actif à la fois. */
+/** Laboratoire : un module actif à la fois. Les intitulés viennent de la peau. */
 const props = defineProps({
   module: { type: String, default: 'mcp' },
+  /** { mcp, pqc, hologram } — intitulés propres à la forme */
+  labels: { type: Object, default: () => ({}) },
 })
 
 const COMPONENTS = { mcp: LabSwarm, pqc: LabPqc, hologram: LabOrbit }
@@ -16,16 +18,16 @@ const current = computed(() => COMPONENTS[props.module] ?? LabSwarm)
 
 <template>
   <div class="space-y-6">
-    <nav class="flex flex-wrap gap-3 border-b border-orange-500/30 pb-4" aria-label="Modules du labo orbital">
+    <nav class="flex flex-wrap gap-3 border-b border-term-accent/30 pb-4" aria-label="Modules du laboratoire">
       <RouterLink
         v-for="m in LAB_MODULES"
         :key="m.id"
         :to="{ name: 'lab', params: { module: m.id } }"
-        class="ms-btn"
-        :class="m.id === module ? 'ms-btn-on' : ''"
+        class="term-btn"
+        :class="m.id === module ? 'term-btn-on' : ''"
         :aria-current="m.id === module ? 'page' : undefined"
       >
-        [{{ m.code }}] {{ m.tab }}
+        [{{ m.code }}] {{ labels[m.id] ?? m.tab }}
       </RouterLink>
     </nav>
 

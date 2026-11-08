@@ -73,28 +73,28 @@ function onKey(event) {
 }
 
 const toneClass = {
-  dim: 'text-slate-400',
-  cmd: 'text-slate-200',
-  out: 'text-orange-300',
-  err: 'text-rose-300',
+  dim: 'text-term-dim',
+  cmd: 'text-term-ink',
+  out: 'text-term-accent-lt',
+  err: 'text-term-alert',
 }
 </script>
 
 <template>
   <div
     v-if="open"
-    class="fixed inset-0 z-[90] flex items-start justify-center bg-black/85 px-4 pt-20 backdrop-blur-md sm:pt-24"
+    class="fixed inset-0 z-[90] flex items-start justify-center bg-term-void/85 px-4 pt-20 backdrop-blur-md sm:pt-24"
     role="dialog"
     aria-modal="true"
     aria-label="Terminal de mission"
     @click.self="emit('close')"
   >
-    <div class="ms-card w-full max-w-3xl overflow-hidden border-orange-500 shadow-[0_0_50px_rgba(249,115,22,0.3)]">
-      <div class="flex items-center justify-between gap-3 border-b border-orange-500/40 bg-black/90 p-4 font-techmono text-xs text-orange-400">
-        <span class="font-orbitron font-bold tracking-widest">[MISSION CONTROL CLI]</span>
+    <div class="term-card w-full max-w-3xl overflow-hidden border-term-accent term-modal-glow">
+      <div class="flex items-center justify-between gap-3 border-b border-term-accent/40 bg-term-void/90 p-4 font-term-mono text-xs text-term-accent">
+        <span class="font-term-display font-bold tracking-widest">[MISSION CONTROL CLI]</span>
         <button
           type="button"
-          class="border border-rose-500/40 bg-rose-500/20 px-3 py-1 font-techmono text-rose-300 transition hover:bg-rose-500 hover:text-black"
+          class="border border-term-alert/40 bg-term-alert/20 px-3 py-1 font-term-mono text-term-alert transition hover:bg-term-alert hover:text-term-void"
           @click="emit('close')"
         >
           ABORT [ESC]
@@ -102,32 +102,32 @@ const toneClass = {
       </div>
 
       <div class="space-y-4 p-5">
-        <div class="font-techmono text-xs text-slate-400">
+        <div class="font-term-mono text-xs text-term-dim">
           Commandes :
-          <code class="text-amber-400">help</code>, <code class="text-amber-400">logs</code>,
-          <code class="text-amber-400">open</code>, <code class="text-amber-400">swarm</code>,
-          <code class="text-amber-400">pqc</code>, <code class="text-amber-400">orbit</code>,
-          <code class="text-amber-400">formes</code>, <code class="text-amber-400">telemetry</code>,
-          <code class="text-amber-400">clear</code>
+          <code class="text-term-accent2">help</code>, <code class="text-term-accent2">logs</code>,
+          <code class="text-term-accent2">open</code>, <code class="text-term-accent2">swarm</code>,
+          <code class="text-term-accent2">pqc</code>, <code class="text-term-accent2">orbit</code>,
+          <code class="text-term-accent2">formes</code>, <code class="text-term-accent2">telemetry</code>,
+          <code class="text-term-accent2">clear</code>
         </div>
 
-        <div class="flex items-center gap-3 border border-orange-500/50 bg-black p-3">
-          <span class="font-techmono font-bold text-orange-500">&gt;&gt;</span>
-          <label for="ms-cli" class="sr-only">Commande de mission</label>
+        <div class="flex items-center gap-3 border border-term-accent/50 bg-term-void p-3">
+          <span class="font-term-mono font-bold text-term-accent">&gt;&gt;</span>
+          <label for="term-cli" class="sr-only">Commande de mission</label>
           <input
-            id="ms-cli"
+            id="term-cli"
             ref="input"
             v-model="value"
             type="text"
             autocomplete="off"
             spellcheck="false"
             placeholder="Entrez une commande de mission…"
-            class="w-full bg-transparent font-techmono text-sm text-orange-200 focus:outline-none"
+            class="w-full bg-transparent font-term-mono text-sm text-term-accent-lt focus:outline-none"
             @keydown="onKey"
           />
         </div>
 
-        <div ref="output" class="max-h-60 space-y-1 overflow-y-auto bg-black/50 p-3 font-techmono text-xs" aria-live="polite">
+        <div ref="output" class="max-h-60 space-y-1 overflow-y-auto bg-term-void/50 p-3 font-term-mono text-xs" aria-live="polite">
           <div v-for="(l, i) in history" :key="i" class="whitespace-pre-line" :class="toneClass[l.tone]">{{ l.text }}</div>
         </div>
       </div>

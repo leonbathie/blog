@@ -7,7 +7,7 @@ import { SWARM_TASKS } from '../labs.js'
  * Le déroulé dépend réellement de la tâche choisie, et les minuteries sont
  * annulées au démontage comme à chaque nouveau lancement.
  */
-const mission = inject('mission')
+const terminal = inject('terminal')
 
 const taskId = ref(SWARM_TASKS[0].id)
 const task = computed(() => SWARM_TASKS.find((t) => t.id === taskId.value) ?? SWARM_TASKS[0])
@@ -43,13 +43,13 @@ function deploy() {
 
   lines.value = [{ text: `Lancement de l'essaim — ${current.label}`, tone: 'warn' }]
   if (consigne) push(`Consigne transmise aux agents : « ${consigne} »`, 'dim')
-  mission.beep(700, 0.08)
+  terminal.beep(700, 0.08)
 
   current.agents.forEach((agent, i) => {
     timers.push(
       window.setTimeout(() => {
         push(agent)
-        mission.beep(900 + i * 160, 0.04)
+        terminal.beep(900 + i * 160, 0.04)
       }, 420 * (i + 1)),
     )
   })
@@ -58,8 +58,8 @@ function deploy() {
     window.setTimeout(
       () => {
         push(current.done, 'ok')
-        mission.beep(1300, 0.12)
-        mission.showToast('Essaim MCP déployé')
+        terminal.beep(1300, 0.12)
+        terminal.showToast('Essaim MCP déployé')
         running.value = false
       },
       420 * (current.agents.length + 1),
@@ -68,23 +68,23 @@ function deploy() {
 }
 
 const toneClass = {
-  idle: 'text-slate-500',
-  dim: 'text-slate-400',
-  warn: 'text-amber-400',
-  ok: 'text-emerald-400 font-bold',
-  out: 'text-orange-400',
+  idle: 'text-term-faint',
+  dim: 'text-term-dim',
+  warn: 'text-term-accent2',
+  ok: 'text-term-ok font-bold',
+  out: 'text-term-accent',
 }
 
 onBeforeUnmount(clearTimers)
 </script>
 
 <template>
-  <section class="ms-card space-y-6 p-6 sm:p-8">
+  <section class="term-card space-y-6 p-6 sm:p-8">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h3 class="font-orbitron text-xl font-bold text-white sm:text-2xl">Simulateur d'essaim MCP</h3>
+      <h3 class="font-term-display text-xl font-bold text-term-head sm:text-2xl">Simulateur d'essaim MCP</h3>
       <span
-        class="border px-3 py-1 font-techmono text-xs font-bold"
-        :class="running ? 'border-amber-500/50 bg-amber-500/15 text-amber-300' : 'border-orange-500/40 bg-orange-500/15 text-orange-300'"
+        class="border px-3 py-1 font-term-mono text-xs font-bold"
+        :class="running ? 'border-term-accent2/50 bg-term-accent2/15 text-term-accent2' : 'border-term-accent/40 bg-term-accent/15 text-term-accent-lt'"
         role="status"
       >
         {{ running ? 'SWARM_RUNNING' : 'MISSION_ACTIVE' }}
@@ -94,29 +94,29 @@ onBeforeUnmount(clearTimers)
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-12">
       <div class="space-y-5 lg:col-span-6">
         <div>
-          <label for="ms-task" class="mb-2 block font-grotesk text-sm font-medium text-slate-400">
+          <label for="term-task" class="mb-2 block font-term-body text-sm font-medium text-term-dim">
             Sélectionner la tâche de l'essaim
           </label>
-          <select id="ms-task" v-model="taskId" class="ms-field" @change="onTaskChange">
+          <select id="term-task" v-model="taskId" class="term-field" @change="onTaskChange">
             <option v-for="t in SWARM_TASKS" :key="t.id" :value="t.id">{{ t.label }}</option>
           </select>
         </div>
 
         <div>
-          <label for="ms-prompt" class="mb-2 block font-grotesk text-sm font-medium text-slate-400">
+          <label for="term-prompt" class="mb-2 block font-term-body text-sm font-medium text-term-dim">
             Instructions spécifiques aux agents
           </label>
-          <textarea id="ms-prompt" v-model="prompt" rows="3" class="ms-field resize-y text-amber-300" />
+          <textarea id="term-prompt" v-model="prompt" rows="3" class="term-field resize-y text-term-accent2" />
         </div>
 
-        <button type="button" class="ms-btn ms-btn-on w-full py-3" :disabled="running" @click="deploy">
+        <button type="button" class="term-btn term-btn-on w-full py-3" :disabled="running" @click="deploy">
           🚀 Déployer l'essaim d'agents MCP
         </button>
       </div>
 
       <div class="min-w-0 space-y-3 lg:col-span-6">
-        <div class="font-grotesk text-sm font-medium text-slate-400">Console de contrôle en temps réel</div>
-        <div ref="consoleEl" class="ms-console h-60 space-y-1.5 p-4" aria-live="polite">
+        <div class="font-term-body text-sm font-medium text-term-dim">Console de contrôle en temps réel</div>
+        <div ref="consoleEl" class="term-console h-60 space-y-1.5 p-4" aria-live="polite">
           <div v-for="(l, i) in lines" :key="i" :class="toneClass[l.tone]">&gt; {{ l.text }}</div>
         </div>
       </div>
