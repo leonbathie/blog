@@ -37,32 +37,61 @@ html[data-theme='evolution'] body {
   background: #000;
   border-bottom: 1px solid rgb(var(--evo-line));
 }
-.evo-banner-canvas {
+/* La photo : entière à partir de 640 px ; sur téléphone, deux recadrages côte à côte */
+.evo-photo {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #000;
+}
+.evo-photo-wide {
+  display: none;
+}
+.evo-photo-crop {
   display: block;
-  margin-inline: auto;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+  width: 100%;
+  aspect-ratio: 12 / 7;
+  object-fit: cover;
+}
+.evo-photo-left {
+  object-position: 0% 50%;
+}
+.evo-photo-right {
+  object-position: 84% 50%;
+}
+.evo-beacon {
+  display: none;
 }
 .evo-title {
   font-family: 'Press Start 2P', monospace;
   color: #f3eacd;
   text-shadow:
-    0 0 1px #fff8e6,
-    3px 3px 0 #2a2016;
+    0 0 2px rgb(0 0 0 / 0.9),
+    0 2px 8px rgb(0 0 0 / 0.8);
   letter-spacing: 1px;
 }
-.evo-tag {
-  font-family: 'Share Tech Mono', monospace;
-  letter-spacing: 0.18em;
-  color: #ece4cf;
-}
+.evo-sub,
+.evo-tag,
 .evo-domains {
-  font-family: 'Share Tech Mono', monospace;
+  font-family: 'IBM Plex Mono', 'Share Tech Mono', monospace;
   color: #ece4cf;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.9);
+}
+.evo-tag {
+  letter-spacing: 0.14em;
+  word-spacing: 0.55em;
+}
+.evo-rule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin-top: 0.35rem;
+  background: linear-gradient(90deg, transparent, #e0d8bf 12%, #e0d8bf 88%, transparent);
+  opacity: 0.9;
 }
 .evo-domains li::before {
   content: '// ';
-  color: #a8a08c;
+  color: #cfc6ad;
 }
 
 /* ---------- Frise des époques ---------- */
@@ -886,8 +915,7 @@ html[data-theme='evolution'] body {
 }
 .evo-sub {
   font-size: 0.88rem;
-  font-weight: 600;
-  color: #ece4cf;
+  font-weight: 500;
 }
 .evo-tag {
   font-size: 0.7rem;
@@ -901,10 +929,33 @@ html[data-theme='evolution'] body {
   font-size: 0.76rem;
 }
 @media (min-width: 640px) {
+  .evo-photo {
+    display: block;
+  }
+  .evo-photo-wide {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .evo-photo-crop {
+    display: none;
+  }
+  /* Balise sur Dakar, sur le globe filaire */
+  .evo-beacon {
+    position: absolute;
+    display: block;
+    width: clamp(4px, 0.4vw, 8px);
+    height: clamp(4px, 0.4vw, 8px);
+    border-radius: 50%;
+    background: #ff5a3c;
+    box-shadow: 0 0 6px 2px rgb(255 90 60 / 0.7);
+    transform: translate(-50%, -50%);
+    animation: evo-beacon 2.2s ease-in-out infinite;
+  }
   .evo-banner-text {
     position: absolute;
     inset-block: 0;
-    left: 34%;
+    left: 33%;
     right: 33%;
     justify-content: center;
     gap: clamp(0.35rem, 0.9vw, 0.85rem);
@@ -912,14 +963,16 @@ html[data-theme='evolution'] body {
     pointer-events: none;
   }
   .evo-title {
-    font-size: clamp(1.05rem, 2.85vw, 2.75rem);
+    font-size: clamp(1.05rem, 3.1vw, 3.6rem);
   }
   .evo-sub {
-    font-size: clamp(0.7rem, 1.15vw, 1.1rem);
-    text-shadow: 0 1px 2px #000;
+    font-size: clamp(0.7rem, 1.15vw, 1.15rem);
   }
   .evo-tag {
-    font-size: clamp(0.56rem, 0.85vw, 0.85rem);
+    font-size: clamp(0.56rem, 0.9vw, 0.95rem);
+  }
+  .evo-rule {
+    margin-top: clamp(0.2rem, 0.5vw, 0.6rem);
   }
   .evo-domains {
     display: none;
@@ -933,9 +986,8 @@ html[data-theme='evolution'] body {
     display: block;
     padding: 0;
     transform: translateY(-50%);
-    font-size: clamp(0.6rem, 0.78vw, 0.84rem);
-    line-height: 1.6;
-    text-shadow: 0 1px 2px #000;
+    font-size: clamp(0.6rem, 0.92vw, 1rem);
+    line-height: 1.75;
   }
 }
 
@@ -1377,4 +1429,16 @@ html[data-theme='evolution'] body {
 .era-prompt-go {
   flex: none;
   border-radius: 999px;
+}
+
+@keyframes evo-beacon {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
 }

@@ -78,7 +78,7 @@ export const themes = [
     date: '2026-11',
     summary: 'Machine à remonter le Web : la même page de 1991 à 2050, dans le navigateur de chaque époque.',
     fonts:
-      'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@500;700&family=Press+Start+2P&family=Share+Tech+Mono&display=swap',
+      'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;600;700&family=Orbitron:wght@500;700&family=Press+Start+2P&family=Share+Tech+Mono&display=swap',
     integratedSwitcher: true,
     load: () => import('./evolution/Theme.vue'),
   },

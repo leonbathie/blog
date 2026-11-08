@@ -5,7 +5,7 @@ import { lang, setLang } from '../../core/i18n.js'
 import { useThemes } from '../../core/themes.js'
 import { contentIn } from '../../content/index.js'
 import { themeLabel } from '../leontechlab/i18n.js'
-import { createBanner, LAYOUTS } from './banner.js'
+import bannerPhoto from './banner.webp'
 import { DEFAULT_ERA, ERAS, eraIn, fill, FRAME, ICONS, LABELS, techsIn } from './eras.js'
 import Timeline from './components/Timeline.vue'
 import EraPreview from './components/EraPreview.vue'
@@ -241,13 +241,10 @@ watch(
 const otherForms = computed(() => themes.filter((th) => th.id !== active.value.id))
 
 /* ---------- Bandeau ---------- */
-// Même seuil que le préfixe `sm:` de Tailwind : en dessous, le titre passe sous le dessin.
-const compactQuery = window.matchMedia('(max-width: 639px)')
-const bannerInit = compactQuery.matches ? LAYOUTS.compact : LAYOUTS.wide
-const bannerCanvas = ref(null)
-let banner = null
-let bannerSeen = null
-const onCompactChange = (e) => banner?.setCompact(e.matches)
+// La photo de la maquette, sans son texte incrusté : le titre reste du HTML, par-dessus.
+// Sur téléphone, deux recadrages de la même image : l'ingénieur, puis le globe.
+// Position de Dakar sur le globe filaire, en pourcentage de l'image (balise qui pulse).
+const DAKAR = { left: '73.6%', top: '48.3%' }
 
 /* ---------- Cycle de vie ---------- */
 onMounted(() => {
@@ -257,26 +254,13 @@ onMounted(() => {
   visits.value = n
   syncHistory()
   clockTimer = window.setInterval(() => (now.value = new Date()), 20_000)
-  compactQuery.addEventListener('change', onCompactChange)
-  if (bannerCanvas.value) {
-    banner = createBanner(bannerCanvas.value, { compact: compactQuery.matches })
-    banner.start()
-    // L'animation s'arrête quand le bandeau sort de l'écran.
-    if ('IntersectionObserver' in window) {
-      bannerSeen = new IntersectionObserver(([entry]) => (entry.isIntersecting ? banner?.start() : banner?.stop()))
-      bannerSeen.observe(bannerCanvas.value)
-    }
-  }
 })
 
 onBeforeUnmount(() => {
   window.clearTimeout(toastTimer)
   window.clearTimeout(loadTimer)
   window.clearInterval(clockTimer)
-  compactQuery.removeEventListener('change', onCompactChange)
   stopHistory()
-  bannerSeen?.disconnect()
-  banner?.dispose()
   root.classList.remove('dark')
   root.lang = 'fr' // les autres formes sont en français
 })
@@ -288,13 +272,19 @@ onBeforeUnmount(() => {
     <div role="status" aria-live="polite" class="evo-toast" :class="toast.show ? 'evo-toast-on' : ''">{{ toast.msg }}</div>
 
     <div class="evo-shell">
-      <!-- 1. Bandeau : salle de contrôle, titre, Terre et satellite -->
+      <!-- 1. Bandeau : la photo (salle de contrôle, globe, satellite), titre par-dessus -->
       <header class="evo-banner" :aria-label="F.banner">
-        <canvas ref="bannerCanvas" class="evo-banner-canvas" :width="bannerInit.w" :height="bannerInit.h" aria-hidden="true" />
+        <div class="evo-photo">
+          <img class="evo-photo-wide" :src="bannerPhoto" alt="" width="2000" height="207" fetchpriority="high" decoding="async" />
+          <img class="evo-photo-crop evo-photo-left" :src="bannerPhoto" alt="" aria-hidden="true" decoding="async" />
+          <img class="evo-photo-crop evo-photo-right" :src="bannerPhoto" alt="" aria-hidden="true" decoding="async" />
+          <span class="evo-beacon" :style="DAKAR" aria-hidden="true" />
+        </div>
         <div class="evo-banner-text" lang="en">
           <p class="evo-title">LeonTechLab</p>
           <p class="evo-sub">{{ signature }} — AI Research &amp; Engineering</p>
           <p class="evo-tag">RESEARCH · BUILD · LEARN · INNOVATE</p>
+          <span class="evo-rule" aria-hidden="true" />
         </div>
         <ul class="evo-domains" lang="en">
           <li v-for="d in DOMAINS" :key="d">{{ d }}</li>
