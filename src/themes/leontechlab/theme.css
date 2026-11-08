@@ -105,10 +105,13 @@ html[data-theme='leontechlab'] body {
   border-bottom: 1px solid rgb(var(--leon-green));
   background: rgb(var(--leon-bg));
 }
+/* hero.js fixe la taille exacte (multiple entier de la grille) ; ces règles
+   ne servent qu'avant le premier rendu. */
 .leon-hero-canvas {
   display: block;
   width: 100%;
   height: auto;
+  margin-inline: auto;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -405,6 +408,182 @@ html[data-theme='leontechlab'] body {
   line-height: 0;
 }
 
+/* ---------- Sélecteur de langue (barre d'état) ---------- */
+.leon-lang {
+  display: inline-flex;
+  border: 1px solid rgb(var(--leon-green) / 0.7);
+}
+.leon-lang-btn {
+  padding: 0 6px;
+  color: rgb(var(--leon-green));
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.leon-lang-btn + .leon-lang-btn {
+  border-left: 1px solid rgb(var(--leon-green) / 0.7);
+}
+.leon-lang-btn:hover {
+  background: rgb(var(--leon-green) / 0.15);
+}
+.leon-lang-on,
+.leon-lang-on:hover {
+  background: rgb(var(--leon-green));
+  color: rgb(var(--leon-bg));
+}
+.leon-prompt:hover {
+  color: rgb(var(--leon-bright));
+}
+
+/* ---------- Cadre de console (listings du laboratoire) ---------- */
+.leon-cmdbox {
+  position: relative;
+  padding: 1.85rem 0.75rem 0.55rem; /* la barre de titre occupe le haut */
+  background: rgb(var(--leon-bg));
+  border: 1px solid rgb(var(--leon-green) / 0.6);
+  box-shadow: inset 0 0 16px rgb(var(--leon-green) / 0.08);
+}
+.leon-cmdbox::before {
+  content: 'C:\\LEONTECHLAB\\LABO';
+  position: absolute;
+  inset: 0 0 auto 0;
+  padding: 0 0.5rem;
+  background: rgb(var(--leon-green) / 0.85);
+  color: rgb(var(--leon-bg));
+  font-size: 0.98rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.leon-cmdbox::after {
+  content: 'C:\\LEONTECHLAB\\LABO>_';
+  display: block;
+  margin-top: 0.3rem;
+  color: rgb(var(--leon-ink) / 0.75);
+  animation: leon-prompt-blink 1.1s steps(1) infinite;
+}
+@keyframes leon-prompt-blink {
+  50% {
+    content: 'C:\\LEONTECHLAB\\LABO> ';
+  }
+}
+
+/* ---------- Invite de commande ---------- */
+.leon-cmd {
+  display: flex;
+  flex-direction: column;
+  max-height: min(78vh, 36rem);
+  background: rgb(var(--leon-bg));
+  border: 2px solid rgb(var(--leon-green));
+  box-shadow:
+    0 0 0 1px rgb(var(--leon-dark)),
+    0 12px 40px rgb(0 0 0 / 0.85),
+    0 0 30px rgb(var(--leon-green) / 0.2);
+  font-size: 1.12rem;
+}
+.leon-cmd-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1px 8px;
+  background: rgb(var(--leon-green));
+  color: rgb(var(--leon-bg));
+}
+.leon-cmd-x {
+  padding: 0 4px;
+  color: inherit;
+}
+.leon-cmd-x:hover {
+  background: rgb(var(--leon-bg));
+  color: rgb(var(--leon-green));
+}
+.leon-cmd-screen {
+  flex: 1 1 auto;
+  min-height: 9rem;
+  overflow-y: auto;
+  padding: 6px 10px 8px;
+  white-space: pre-wrap; /* garde l'alignement des colonnes de help et dir */
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  cursor: text;
+}
+.leon-cmd-in {
+  color: rgb(var(--leon-ink));
+}
+.leon-cmd-out {
+  color: rgb(var(--leon-green));
+}
+.leon-cmd-ok {
+  color: rgb(var(--leon-bright));
+}
+.leon-cmd-err {
+  color: rgb(var(--leon-red));
+}
+.leon-cmd-dim {
+  color: rgb(var(--leon-dim));
+}
+.leon-cmd-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 0 0 1px;
+  background: transparent;
+  border: 0;
+  color: rgb(var(--leon-ink));
+  caret-color: rgb(var(--leon-green));
+  font: inherit;
+}
+/* Le curseur clignotant et le cadre de la fenêtre signalent déjà le focus */
+.theme-leon .leon-cmd-input:focus-visible {
+  outline: none;
+}
+.leon-cmd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  padding: 3px 8px 4px;
+  border-top: 1px solid rgb(var(--leon-green) / 0.5);
+  font-size: 1.02rem;
+}
+
+/* ---------- Laboratoire : jetons, barres et oscilloscope ---------- */
+@keyframes leon-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.leon-chip {
+  display: inline-block;
+  animation: leon-chip-in 0.25s ease-out both;
+}
+.leon-bar {
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.leon-scope {
+  touch-action: pan-y; /* glisser à l'horizontale lit la courbe, à la verticale fait défiler */
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* Tracé progressif de R(t) à l'ouverture du module */
+.leon-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: leon-draw 1.4s ease-out 0.15s forwards;
+}
+@keyframes leon-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 /* ---------- Ascenseur ---------- */
 .theme-leon ::-webkit-scrollbar {
   width: 10px;
@@ -595,6 +774,14 @@ html[data-theme='leontechlab'] body {
   .leon-menu-item,
   .leon-btn {
     min-height: 2.5rem;
+  }
+  .leon-lang-btn {
+    min-height: 2rem;
+    padding: 0 10px;
+  }
+  .leon-prompt {
+    min-height: 2.25rem;
+    padding: 0 4px;
   }
   .leon-field {
     min-height: 2.5rem;
