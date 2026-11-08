@@ -31,17 +31,18 @@ const clouds = [
 ]
 const stars = Array.from({ length: 26 }, (_, i) => ({ x: (i * 137) % W, y: 6 + ((i * 53) % 44) }))
 
-// Silhouette de ville (déterministe) avec fenêtres allumées
+// Silhouette de ville (déterministe), volontairement basse et discrète :
+// elle doit rester un décor, pas concurrencer les puces dorées.
 const skyline = []
 for (let x = 70, i = 0; x < W - 80; i++) {
   const w = 26 + ((i * 17) % 22)
-  const h = 18 + ((i * 29) % 34)
+  const h = 12 + ((i * 29) % 20)
   const windows = []
-  for (let wy = GROUND - h + 5; wy < GROUND - 4; wy += 7) {
-    for (let wx = x + 4; wx < x + w - 4; wx += 6) if ((wx * 7 + wy * 3 + i) % 5 === 0) windows.push({ x: wx, y: wy })
+  for (let wy = GROUND - h + 5; wy < GROUND - 5; wy += 8) {
+    for (let wx = x + 5; wx < x + w - 5; wx += 8) if ((wx * 7 + wy * 3 + i) % 9 === 0) windows.push({ x: wx, y: wy })
   }
   skyline.push({ x, w, h, windows })
-  x += w + 6 + ((i * 11) % 14)
+  x += w + 10 + ((i * 11) % 16)
 }
 
 const popups = []
@@ -150,31 +151,33 @@ function update() {
 
 function drawRack(ctx, x, label, phase) {
   const top = GROUND - 44
-  ctx.fillStyle = '#334155'
+  ctx.fillStyle = '#4a382a'
   ctx.fillRect(x, top, 38, 44)
-  ctx.fillStyle = '#1e293b'
+  ctx.fillStyle = '#2a1f16'
   ctx.fillRect(x + 3, top + 3, 32, 38)
   for (let r = 0; r < 4; r++) {
-    ctx.fillStyle = '#475569'
+    ctx.fillStyle = '#6b513a'
     ctx.fillRect(x + 5, top + 6 + r * 9, 28, 5)
     const on = (Math.floor(tick / 12) + r + phase) % 3 !== 0
-    ctx.fillStyle = on ? '#34d399' : '#f59e0b'
+    ctx.fillStyle = on ? '#fbbf24' : '#b45309'
     ctx.fillRect(x + 28, top + 7 + r * 9, 3, 3)
   }
   ctx.font = PIXEL_FONT
-  ctx.fillStyle = '#6EE7B7'
+  ctx.fillStyle = '#fcd34d'
   ctx.fillText(label, x + 3, top - 5)
 }
 
 function draw(ctx) {
-  // Ciel de nuit
-  const sky = ctx.createLinearGradient(0, 0, 0, H)
-  sky.addColorStop(0, '#0f172a')
-  sky.addColorStop(1, '#1e293b')
+  // Crépuscule sur Dakar : indigo profond en haut, braise à l'horizon
+  const sky = ctx.createLinearGradient(0, 0, 0, GROUND)
+  sky.addColorStop(0, '#171029')
+  sky.addColorStop(0.6, '#3a1c35')
+  sky.addColorStop(0.9, '#7c3517')
+  sky.addColorStop(1, '#b45309')
   ctx.fillStyle = sky
   ctx.fillRect(0, 0, W, H)
 
-  ctx.fillStyle = 'rgba(255,255,255,0.35)'
+  ctx.fillStyle = 'rgba(255, 237, 213, 0.5)'
   for (const s of stars) ctx.fillRect(s.x, s.y, 1.5, 1.5)
 
   ctx.fillStyle = 'rgba(255,255,255,0.14)'
@@ -185,11 +188,11 @@ function draw(ctx) {
     ctx.fillRect(c.x + 10, c.y - 6, 28, 6)
   }
 
-  // Ville en arrière-plan
+  // Ville en contre-jour sur le couchant, fenêtres allumées
   for (const b of skyline) {
-    ctx.fillStyle = '#16233a'
+    ctx.fillStyle = 'rgba(32, 16, 28, 0.82)'
     ctx.fillRect(b.x, GROUND - b.h, b.w, b.h)
-    ctx.fillStyle = 'rgba(251, 191, 36, 0.55)'
+    ctx.fillStyle = 'rgba(253, 224, 71, 0.4)'
     for (const w of b.windows) ctx.fillRect(w.x, w.y, 2, 2)
   }
 
@@ -197,24 +200,41 @@ function draw(ctx) {
   drawRack(ctx, 18, 'DKR', 0)
   drawRack(ctx, W - 56, 'GPU', 1)
 
-  // Puces de données
+  // Puces de données : or chaud, halo permanent, flash blanc quand on les active
   for (const chip of chips) {
     chip.bump = chip.bump < 0 ? chip.bump + 1.2 : 0
     chip.flash = Math.max(0, chip.flash - 0.04)
     const y = chip.y + chip.bump
-    ctx.fillStyle = '#d4a017'
+
+    ctx.save()
+    ctx.shadowColor = 'rgba(251, 191, 36, 0.85)'
+    ctx.shadowBlur = 10 + chip.flash * 18
+
+    // Pattes du boîtier
+    ctx.fillStyle = '#92400e'
     for (let px = chip.x + 6; px < chip.x + chip.w - 4; px += 9) {
       ctx.fillRect(px, y - 3, 3, 3)
       ctx.fillRect(px, y + chip.h, 3, 3)
     }
-    ctx.fillStyle = '#134e4a'
+    // Contour puis face
+    ctx.fillStyle = '#7c2d12'
     ctx.fillRect(chip.x, y, chip.w, chip.h)
-    ctx.fillStyle = chip.flash > 0 ? `rgba(45, 212, 191, ${0.55 + chip.flash * 0.45})` : '#0f766e'
+    ctx.fillStyle = chip.flash > 0 ? `rgba(254, 243, 199, ${0.6 + chip.flash * 0.4})` : '#f59e0b'
     ctx.fillRect(chip.x + 2, y + 2, chip.w - 4, chip.h - 4)
-    ctx.fillStyle = '#99f6e4'
-    ctx.fillRect(chip.x + 5, y + 5, 3, 3)
+    ctx.restore()
+
+    // Biseau clair en haut, ombre en bas : la puce paraît en relief
+    ctx.fillStyle = 'rgba(255, 237, 213, 0.55)'
+    ctx.fillRect(chip.x + 2, y + 2, chip.w - 4, 2)
+    ctx.fillStyle = 'rgba(120, 53, 15, 0.45)'
+    ctx.fillRect(chip.x + 2, y + chip.h - 4, chip.w - 4, 2)
+
+    // Repère de broche 1
+    ctx.fillStyle = '#7c2d12'
+    ctx.fillRect(chip.x + 5, y + 6, 3, 3)
+
     ctx.font = PIXEL_FONT
-    ctx.fillStyle = '#ecfeff'
+    ctx.fillStyle = '#451a03'
     ctx.fillText(chip.label, chip.x + 11, y + 17)
   }
 
@@ -233,7 +253,7 @@ function draw(ctx) {
     ctx.fillStyle = '#FDE68A'
     ctx.fillRect(p.x - 2, p.y - 9, 4, 8)
     ctx.font = PIXEL_FONT
-    ctx.fillStyle = '#34D399'
+    ctx.fillStyle = '#fff7ed'
     ctx.fillText(p.text, p.x - 36, p.y - 18)
   }
 
@@ -253,17 +273,19 @@ function draw(ctx) {
   ctx.fillRect(hx + 3 + leg, hy + 20, 6, 6)
   ctx.fillRect(hx + 13 - leg, hy + 20, 6, 6)
 
-  // Sol : circuit imprimé
-  ctx.fillStyle = '#052e16'
+  // Sol : circuit imprimé cuivré
+  ctx.fillStyle = '#3b1d0c'
   ctx.fillRect(0, GROUND, W, H - GROUND)
-  ctx.fillStyle = '#22c55e'
+  ctx.fillStyle = '#fbbf24'
   ctx.fillRect(0, GROUND, W, 2)
-  ctx.fillStyle = '#15803d'
+  ctx.fillStyle = 'rgba(251, 191, 36, 0.25)'
+  ctx.fillRect(0, GROUND + 2, W, 1)
+  ctx.fillStyle = '#b45309'
   for (let gx = 0; gx < W; gx += 24) {
     ctx.fillRect(gx + 2, GROUND + 7, 18, 2)
     ctx.fillRect(gx + 12, GROUND + 13, 2, 7)
   }
-  ctx.fillStyle = '#fbbf24'
+  ctx.fillStyle = '#fde68a'
   for (let gx = 10; gx < W; gx += 48) ctx.fillRect(gx, GROUND + 6, 4, 4)
 }
 
@@ -305,7 +327,7 @@ defineExpose({ jump, combo })
 <template>
   <details class="mono-arcade" :open="open" @toggle="emit('update:open', $event.target.open)">
     <summary>Une pause au laboratoire : découvrir le mini-jeu 8-bit</summary>
-    <div class="relative border-t-2 border-amber-500/50 bg-sky-950 dark:border-amber-400/40">
+    <div class="relative border-t-2 border-amber-500/60 bg-[#2a1708] dark:border-amber-400/50">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 bg-zinc-900/95 px-3 py-1.5 font-pixel text-[10px] text-amber-400">
         <div class="flex items-center gap-2">
           <span class="inline-block h-2 w-2 animate-ping rounded-full bg-emerald-400" />
