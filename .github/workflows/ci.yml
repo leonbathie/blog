@@ -37,3 +37,17 @@ jobs:
         run: |
           test -f dist/index.html || { echo "::error::dist/index.html manquant."; exit 1; }
           echo "Build OK — $(find dist -type f | wc -l) fichiers."
+
+      # Les scripts de deploy/ ne tournent que sur le VPS : on les contrôle ici,
+      # puisqu'ils ne peuvent pas être validés depuis un poste Windows.
+      - name: Lint deploy scripts
+        run: |
+          shopt -s nullglob
+          scripts=(deploy/**/*.sh deploy/*.sh)
+          if [ ${#scripts[@]} -eq 0 ]; then echo "Aucun script à vérifier."; exit 0; fi
+          for f in "${scripts[@]}"; do
+            echo "--- $f"
+            bash -n "$f" || { echo "::error file=$f::erreur de syntaxe bash"; exit 1; }
+          done
+          shellcheck --severity=warning "${scripts[@]}"
+          echo "Scripts de déploiement OK."

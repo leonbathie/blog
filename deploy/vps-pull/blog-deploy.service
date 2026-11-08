@@ -1,0 +1,31 @@
+[Unit]
+Description=Deploiement du blog (le serveur va chercher les nouveaux commits)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+
+# Remplacer par l'utilisateur proprietaire de /srv/blog et /var/www/blog.
+User=ousmane
+Group=ousmane
+
+WorkingDirectory=/srv/blog
+ExecStart=/usr/local/bin/blog-deploy.sh
+
+# npm a besoin d'un HOME pour son cache.
+Environment=HOME=/home/ousmane
+Environment=NODE_ENV=production
+
+# Le build peut prendre un peu de temps sur un petit VPS.
+TimeoutStartSec=900
+
+# Durcissement : le service n'ecrit que dans ses deux dossiers.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/srv/blog /var/www/blog /home/ousmane/.npm
+
+[Install]
+WantedBy=multi-user.target

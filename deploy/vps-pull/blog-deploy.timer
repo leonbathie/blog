@@ -1,0 +1,18 @@
+[Unit]
+Description=Verifie toutes les 5 minutes si le blog a de nouveaux commits
+
+[Timer]
+# Premiere verification 2 min apres le demarrage du serveur, puis toutes les 5 min.
+OnBootSec=2min
+OnUnitActiveSec=5min
+
+# Evite que plusieurs serveurs interrogent GitHub a la seconde pres.
+RandomizedDelaySec=30
+
+# Rattrape une verification manquee si le serveur etait eteint.
+Persistent=true
+
+Unit=blog-deploy.service
+
+[Install]
+WantedBy=timers.target
