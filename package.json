@@ -1,0 +1,30 @@
+{
+  "name": "ousmane-ba-blog",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Blog de recherche & ingénierie d'Ousmane Ba — Vue 3, une nouvelle « forme » à chaque mise à jour.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "katex": "^0.19.1",
+    "markdown-it": "^15.0.3",
+    "three": "^0.187.0",
+    "vue": "^3.5.45",
+    "vue-router": "^5.4.0",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.10",
+    "autoprefixer": "^10.6.2",
+    "postcss": "^8.5.32",
+    "tailwindcss": "^3.4.19",
+    "vite": "^8.3.6"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

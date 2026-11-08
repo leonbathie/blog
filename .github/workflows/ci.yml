@@ -1,0 +1,39 @@
+name: CI
+
+# Vérifie que le site compile, sur toute branche autre que main et sur les pull requests.
+# Utile quand on ajoute une nouvelle forme : on voit l'erreur avant de pousser sur main.
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check build output
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html manquant."; exit 1; }
+          echo "Build OK — $(find dist -type f | wc -l) fichiers."

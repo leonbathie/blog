@@ -1,0 +1,212 @@
+/* =====================================================================
+   Forme 2 — « Cyber-deck 3D » : poste de pilotage spatial
+   Les classes de base sont enveloppées dans :where() (spécificité nulle) pour que
+   les classes Tailwind posées sur un élément gardent la priorité, comme dans la maquette.
+   ===================================================================== */
+
+html[data-theme='cyberdeck'] {
+  color-scheme: dark;
+}
+html[data-theme='cyberdeck'] body {
+  background-color: #030509;
+  color: #e2e8f0;
+  overflow-x: hidden;
+}
+html[data-theme='cyberdeck'] ::-webkit-scrollbar { width: 5px; height: 5px; }
+html[data-theme='cyberdeck'] ::-webkit-scrollbar-track { background: #030509; }
+html[data-theme='cyberdeck'] ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.35); border-radius: 9999px; }
+html[data-theme='cyberdeck'] ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+
+.theme-cyberdeck {
+  --glass-bg: rgba(10, 15, 28, 0.62);
+  --glass-border: rgba(56, 189, 248, 0.22);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.theme-cyberdeck ::selection {
+  background: #22d3ee;
+  color: #020617;
+}
+.theme-cyberdeck :is(button, a, input):focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+/* ---------- Scène 3D plein écran ---------- */
+.cd-webgl {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  cursor: crosshair;
+}
+.cd-webgl canvas {
+  display: block;
+  touch-action: pan-y;
+}
+.cd-webgl.cd-no-webgl {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(0, 240, 255, 0.12), transparent 45%),
+    radial-gradient(circle at 70% 70%, rgba(139, 92, 246, 0.12), transparent 40%);
+}
+
+/* Vignette : le texte reste net par-dessus la 3D */
+.cd-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(circle at 50% 45%, transparent 15%, rgba(3, 5, 9, 0.72) 85%),
+    linear-gradient(180deg, rgba(3, 5, 9, 0.85) 0%, transparent 18%, transparent 82%, rgba(3, 5, 9, 0.95) 100%);
+}
+
+/* Le contenu laisse passer clics et glisser vers la scène 3D, sauf sur les panneaux */
+.cd-main {
+  pointer-events: none;
+}
+.cd-main :is(.spatial-panel, button, a, input, pre, .cd-pe) {
+  pointer-events: auto;
+}
+
+/* ---------- Panneaux en verre ---------- */
+:where(.theme-cyberdeck .spatial-panel) {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+:where(.theme-cyberdeck) .spatial-panel:hover {
+  border-color: rgba(0, 240, 255, 0.45);
+}
+
+/* Cartes inclinables (directive v-tilt) */
+:where(.theme-cyberdeck .tilt-card) {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform;
+  overflow: hidden;
+}
+.theme-cyberdeck .tilt-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(500px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(0, 240, 255, 0.14), transparent 45%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 2;
+}
+.theme-cyberdeck .tilt-card:hover::before { opacity: 1; }
+:where(.theme-cyberdeck .tilt-content) { transform: translateZ(24px); }
+
+/* Dock flottant */
+:where(.theme-cyberdeck .dock-item) {
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+:where(.theme-cyberdeck) .dock-item:hover {
+  transform: translateY(-6px) scale(1.06);
+}
+.theme-cyberdeck .dock-item.active-dock {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.22), rgba(139, 92, 246, 0.25));
+  border-color: #00f0ff;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.35);
+  color: #ffffff;
+}
+
+.theme-cyberdeck .cyber-grid-bg {
+  background-size: 32px 32px;
+  background-image:
+    linear-gradient(to right, rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+}
+
+@keyframes cd-pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6)); }
+  50% { filter: drop-shadow(0 0 18px rgba(139, 92, 246, 0.9)); }
+}
+.theme-cyberdeck .glow-text { animation: cd-pulse-glow 4s infinite ease-in-out; }
+
+/* Viseur HUD */
+.theme-cyberdeck .hud-corner-tl { border-top: 2px solid #00f0ff; border-left: 2px solid #00f0ff; }
+.theme-cyberdeck .hud-corner-tr { border-top: 2px solid #00f0ff; border-right: 2px solid #00f0ff; }
+.theme-cyberdeck .hud-corner-bl { border-bottom: 2px solid #00f0ff; border-left: 2px solid #00f0ff; }
+.theme-cyberdeck .hud-corner-br { border-bottom: 2px solid #00f0ff; border-right: 2px solid #00f0ff; }
+
+/* Textes de combat flottants */
+@keyframes cd-float-score {
+  0% { opacity: 1; transform: translateY(0) scale(0.9); }
+  100% { opacity: 0; transform: translateY(-48px) scale(1.25); }
+}
+.theme-cyberdeck .cd-float {
+  position: fixed;
+  pointer-events: none;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  white-space: nowrap;
+  animation: cd-float-score 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Radar */
+@keyframes cd-radar {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.theme-cyberdeck .radar-sweep {
+  background: conic-gradient(from 0deg, rgba(0, 240, 255, 0.45), transparent 65%);
+  animation: cd-radar 3s linear infinite;
+}
+
+/* ---------- Corps des articles (Markdown) ---------- */
+.cd-prose {
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: #cbd5e1;
+  overflow-wrap: anywhere;
+}
+.cd-prose > * + * { margin-top: 1rem; }
+.cd-prose :is(h2, h3, h4) {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
+  margin-top: 1.5rem;
+}
+.cd-prose h2 { font-size: 1.35rem; }
+.cd-prose h3 { font-size: 1.1rem; }
+.cd-prose strong { color: #ffffff; }
+.cd-prose em { color: #e2e8f0; }
+.cd-prose a { color: #67e8f9; text-decoration: underline; text-underline-offset: 3px; }
+.cd-prose ul { list-style: disc; padding-left: 1.25rem; }
+.cd-prose ol { list-style: decimal; padding-left: 1.25rem; }
+.cd-prose :not(pre) > code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.375rem;
+  background: rgba(0, 240, 255, 0.08);
+  color: #a5f3fc;
+}
+.cd-prose pre {
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  font: 0.75rem/1.6 'JetBrains Mono', monospace;
+  overflow-x: auto;
+  overflow-wrap: normal;
+}
+.cd-prose .math-block {
+  padding: 1rem;
+  border-radius: 1rem;
+  background: rgba(2, 6, 23, 0.9);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: #a5f3fc;
+  overflow-x: auto;
+  overflow-wrap: normal;
+}
+.cd-prose.cd-prose--security .math-block { border-color: rgba(244, 63, 94, 0.3); color: #fecdd3; }
+.cd-prose.cd-prose--industrial .math-block { border-color: rgba(16, 185, 129, 0.3); color: #a7f3d0; }
+.cd-prose .katex { overflow-wrap: normal; }

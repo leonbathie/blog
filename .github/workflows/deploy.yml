@@ -1,0 +1,123 @@
+name: Deploy to VPS
+
+# Mise en ligne du blog : un push sur main construit le site et envoie dist/ sur le VPS.
+# Aucune publication manuelle — tout passe par ce workflow.
+#
+# Secrets attendus (Settings → Secrets and variables → Actions) :
+#   VPS_HOST      hôte ou IP du serveur            (ex. 173.249.2.195)
+#   VPS_USER      utilisateur SSH                  (ex. ousmane)
+#   VPS_PATH      dossier servi par Nginx          (ex. /var/www/blog)
+#   VPS_SSH_KEY   clé privée SSH complète, au format OpenSSH
+#   VPS_PORT      port SSH, optionnel (22 par défaut)
+#   RELOAD_NGINX  "true" pour recharger Nginx après l'envoi, optionnel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false # ne jamais interrompre un déploiement en cours
+
+jobs:
+  deploy:
+    name: Build & rsync to VPS
+    runs-on: ubuntu-latest
+
+    # Les secrets ne sont pas lisibles dans une expression `if:` de step :
+    # on les réexporte en env pour pouvoir tester env.RELOAD_NGINX plus bas.
+    env:
+      RELOAD_NGINX: ${{ secrets.RELOAD_NGINX }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html manquant : le build a échoué."; exit 1; }
+          echo "Build OK — $(find dist -type f | wc -l) fichiers, $(du -sh dist | cut -f1)."
+
+      - name: Verify required secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          missing=()
+          [ -z "$VPS_HOST" ] && missing+=("VPS_HOST")
+          [ -z "$VPS_USER" ] && missing+=("VPS_USER")
+          [ -z "$VPS_PATH" ] && missing+=("VPS_PATH")
+          [ -z "$VPS_SSH_KEY" ] && missing+=("VPS_SSH_KEY")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Secrets manquants : ${missing[*]}"
+            echo "À configurer sur https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 1
+          fi
+          echo "Tous les secrets requis sont présents."
+
+      - name: Prepare SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          port="${VPS_PORT:-22}"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$port" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "SSH prêt (port $port)."
+
+      - name: Deploy via rsync
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PATH: ${{ secrets.VPS_PATH }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          port="${VPS_PORT:-22}"
+          # Le / final de dist/ est indispensable : il envoie le CONTENU du dossier.
+          # --delete retire du serveur les fichiers absents du build (anciens hashés).
+          rsync -avz --delete --human-readable \
+            -e "ssh -i ~/.ssh/deploy_key -p $port -o StrictHostKeyChecking=accept-new" \
+            dist/ \
+            "${VPS_USER}@${VPS_HOST}:${VPS_PATH}/"
+
+      - name: Reload Nginx (optionnel)
+        if: env.RELOAD_NGINX == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          port="${VPS_PORT:-22}"
+          ssh -i ~/.ssh/deploy_key -p "$port" \
+            -o StrictHostKeyChecking=accept-new \
+            "${VPS_USER}@${VPS_HOST}" \
+            "sudo systemctl reload nginx"
+
+      - name: Summary
+        run: |
+          echo "### Blog déployé :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit : \`${GITHUB_SHA::7}\` — $(git log -1 --pretty=%s)" >> $GITHUB_STEP_SUMMARY
+          echo "- Cible : \`${{ secrets.VPS_PATH }}\`" >> $GITHUB_STEP_SUMMARY

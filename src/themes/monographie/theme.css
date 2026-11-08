@@ -1,0 +1,292 @@
+/* =====================================================================
+   Forme 1 — « Monographie » : carnet de recherche éditorial
+   Couleurs pilotées par des variables (papier clair / obsidienne sombre)
+   ===================================================================== */
+
+html[data-theme='monographie'] {
+  --mono-page: 247 245 240;
+  --mono-ink: 36 37 31;
+  --mono-muted: 114 116 110;
+  --mono-line: 222 223 215;
+  --mono-accent: 166 77 52;
+  --mono-panel: 255 254 250;
+  --mono-surface: 240 237 230;
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+html.dark[data-theme='monographie'] {
+  --mono-page: 17 23 20;
+  --mono-ink: 241 240 232;
+  --mono-muted: 168 176 167;
+  --mono-line: 52 64 57;
+  --mono-accent: 230 154 118;
+  --mono-panel: 25 33 28;
+  --mono-surface: 12 17 14;
+  color-scheme: dark;
+}
+
+html[data-theme='monographie'] body {
+  background-color: rgb(var(--mono-page));
+  color: rgb(var(--mono-ink));
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Mode turbo : posé sur <html> pour ne pas décaler les éléments fixes */
+html.mono-turbo {
+  animation: mono-hue 1.2s linear infinite;
+}
+@keyframes mono-hue {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+
+.theme-monographie ::selection {
+  background-color: rgb(var(--mono-accent) / 0.25);
+}
+
+.theme-monographie .katex {
+  font-size: 1.05em;
+}
+
+.theme-monographie :is(button, a, input, summary, canvas):focus-visible {
+  outline: 2px solid rgb(var(--mono-accent));
+  outline-offset: 3px;
+}
+
+.mono-wrap {
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 640px) {
+  .mono-wrap { padding-inline: 2rem; }
+}
+
+/* ---------- En-tête ---------- */
+.mono-kicker {
+  letter-spacing: 0.16em;
+  font-size: 0.64rem;
+}
+.mono-title {
+  font-size: clamp(4.5rem, 10vw, 8.5rem);
+  line-height: 0.88;
+  letter-spacing: -0.065em;
+  margin: 1.5rem 0 1.75rem;
+}
+.mono-subtitle {
+  font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+  line-height: 1.75;
+  max-width: 720px;
+  color: rgb(var(--mono-muted));
+}
+.mono-link-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgb(var(--mono-line));
+  border-radius: 999px;
+  transition: border-color 0.2s, color 0.2s;
+}
+.mono-link-pill:hover {
+  border-color: rgb(var(--mono-accent));
+  color: rgb(var(--mono-accent));
+}
+
+/* ---------- Mini-jeu 8-bit ---------- */
+.mono-arcade {
+  margin-top: 2rem;
+  border: 1px solid rgb(var(--mono-line));
+  border-radius: 12px;
+  overflow: hidden;
+}
+.mono-arcade summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.9rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  color: rgb(var(--mono-muted));
+  font: 500 0.69rem 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.mono-arcade summary::-webkit-details-marker { display: none; }
+.mono-arcade summary::after {
+  content: '+';
+  font-size: 1.2rem;
+  color: rgb(var(--mono-accent));
+}
+.mono-arcade[open] summary::after { content: '\2212'; }
+.mono-arcade canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ---------- Cartes « puces de données » (chiffres clés) ---------- */
+.mono-chip-card {
+  border: 1px solid rgb(var(--mono-line));
+  border-radius: 10px;
+  padding: 1rem;
+  min-width: 0;
+  animation: mono-chip-pulse 2.4s infinite ease-in-out;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+.mono-chip-card:hover {
+  transform: translateY(-3px);
+  border-color: rgb(var(--mono-accent));
+}
+@keyframes mono-chip-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.22), inset 0 -3px 0 rgba(180, 83, 9, 0.3); }
+  50% { box-shadow: 0 0 14px 2px rgba(245, 158, 11, 0.3), inset 0 -3px 0 rgba(180, 83, 9, 0.5); }
+}
+.mono-bump {
+  animation: mono-bump 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes mono-bump {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-14px) scale(1.04); }
+  70% { transform: translateY(3px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* ---------- Navigation ---------- */
+.mono-nav { margin-top: 3rem; }
+.mono-nav-btn {
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  font-size: 0.64rem;
+  letter-spacing: 0.025em;
+}
+
+/* ---------- Titres de section ---------- */
+.mono-section-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.mono-section-intro p {
+  color: rgb(var(--mono-accent));
+  font: 500 0.65rem 'JetBrains Mono', monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 0.65rem;
+}
+.mono-section-intro h2 {
+  font: 500 clamp(2.3rem, 4vw, 3.7rem) / 1 'Newsreader', Georgia, serif;
+  letter-spacing: -0.035em;
+}
+.mono-section-intro > span {
+  color: rgb(var(--mono-muted));
+  font: 0.7rem 'JetBrains Mono', monospace;
+}
+
+/* ---------- Liste & lecteur d'articles ---------- */
+.mono-card-title {
+  font-size: 1.32rem;
+  line-height: 1.22;
+}
+.mono-reader {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06);
+  overflow-wrap: anywhere;
+}
+.mono-reader :is(pre, .katex, .katex-display) {
+  overflow-wrap: normal;
+}
+.mono-reader-title {
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+/* ---------- Corps des articles (Markdown) ---------- */
+.mono-prose {
+  line-height: 1.8;
+  color: rgb(var(--mono-ink) / 0.86);
+}
+.mono-prose > * + * { margin-top: 1rem; }
+.mono-prose :is(h2, h3, h4) {
+  font-family: 'Newsreader', Georgia, serif;
+  font-weight: 500;
+  line-height: 1.3;
+  color: rgb(var(--mono-ink));
+  margin-top: 1.75rem;
+}
+.mono-prose h2 { font-size: 1.5rem; }
+.mono-prose h3 { font-size: 1.15rem; }
+.mono-prose h4 { font-size: 1.05rem; }
+.mono-prose strong { color: rgb(var(--mono-ink)); font-weight: 600; }
+.mono-prose a {
+  color: rgb(var(--mono-accent));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mono-prose ul { list-style: disc; padding-left: 1.25rem; }
+.mono-prose ol { list-style: decimal; padding-left: 1.25rem; }
+.mono-prose blockquote {
+  border-left: 2px solid rgb(var(--mono-accent));
+  padding-left: 1rem;
+  font-style: italic;
+  color: rgb(var(--mono-muted));
+}
+.mono-prose :not(pre) > code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  background: rgb(var(--mono-surface));
+  border: 1px solid rgb(var(--mono-line));
+}
+.mono-prose pre {
+  padding: 1rem;
+  border-radius: 0.25rem;
+  background: #18181b;
+  color: #f4f4f5;
+  border: 1px solid #27272a;
+  font: 0.75rem/1.6 'JetBrains Mono', monospace;
+  overflow-x: auto;
+}
+.mono-prose .math-block {
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  background: rgb(var(--mono-surface) / 0.7);
+  border: 1px solid rgb(var(--mono-line));
+  overflow-x: auto;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 767px) {
+  .mono-title { font-size: clamp(3.8rem, 16vw, 6rem); }
+  .mono-section-intro { flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 639px) {
+  .mono-title { font-size: clamp(3.5rem, 16vw, 5.5rem); margin: 1.25rem 0 1.5rem; }
+  .mono-subtitle { font-size: 1rem; line-height: 1.7; }
+  .mono-link-pill { min-height: 2.75rem; }
+  .mono-arcade summary { min-height: 3rem; line-height: 1.5; }
+  .mono-arcade-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+  .mono-arcade-scroll canvas { width: 600px; max-width: none; height: auto; }
+  .mono-chip-card { padding: 0.75rem; }
+  .mono-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 2rem;
+  }
+  .mono-nav-btn {
+    min-height: 3rem;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.4;
+    padding: 0.7rem 0.8rem;
+  }
+  .mono-reader-title { font-size: clamp(1.8rem, 8vw, 2.4rem); }
+}
+@media (max-width: 360px) {
+  .mono-nav { grid-template-columns: 1fr; }
+}
