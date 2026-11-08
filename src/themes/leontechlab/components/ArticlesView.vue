@@ -1,66 +1,129 @@
 <script setup>
 import { computed } from 'vue'
-import { articles, categories, monthLabel } from '../../../content/index.js'
+import { articles, categories, profile } from '../../../content/index.js'
 import RichText from '../../../components/RichText.vue'
-import PixelThumb from './PixelThumb.vue'
+import PixelIcon from './PixelIcon.vue'
+import { moisCourt } from '../format.js'
 
-/** Colonne centrale : liste des articles, puis lecteur. */
+/**
+ * Colonne centrale : la liste des articles (accueil, ou page « Articles »
+ * avec recherche et filtres), puis le lecteur.
+ */
 const props = defineProps({
+  /** 'home' : tous les articles, sans outils ; 'list' : recherche et filtres */
+  mode: { type: String, default: 'home' },
   filter: { type: String, default: 'all' },
+  query: { type: String, default: '' },
   selected: { type: Object, default: null },
   reading: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:filter', 'select', 'copy-bibtex', 'open-lab', 'close'])
+const emit = defineEmits(['update:filter', 'update:query', 'copy-bibtex', 'open-lab', 'close'])
 
-const TONES = { 'speech-ai': 'blue', security: 'gold', industrial: 'green' }
-const shown = computed(() =>
-  props.filter === 'all' ? articles : articles.filter((a) => a.category === props.filter),
-)
+/** Vignette : champ `icon` de l'article, sinon une icône par domaine */
+const ICONS = { 'speech-ai': 'computer', security: 'satellite', industrial: 'gear' }
+const iconOf = (a) => a.icon ?? ICONS[a.category] ?? 'computer'
+
 const label = (id) => categories.find((c) => c.id === id)?.label ?? id
+const count = (id) => articles.filter((a) => a.category === id).length
+
+const shown = computed(() => {
+  if (props.mode !== 'list') return articles
+  let list = props.filter === 'all' ? articles : articles.filter((a) => a.category === props.filter)
+  const q = props.query.trim().toLowerCase()
+  if (q) list = list.filter((a) => `${a.title} ${a.abstract} ${a.tag} ${label(a.category)}`.toLowerCase().includes(q))
+  return list
+})
+
+function resetList() {
+  emit('update:query', '')
+  emit('update:filter', 'all')
+}
+
+/* Article précédent / suivant, dans l'ordre chronologique */
+const index = computed(() => articles.findIndex((a) => a.slug === props.selected?.slug))
+const older = computed(() => (index.value >= 0 ? articles[index.value + 1] : null) ?? null)
+const newer = computed(() => (index.value > 0 ? articles[index.value - 1] : null) ?? null)
 </script>
 
 <template>
   <!-- Lecteur -->
-  <article v-if="reading && selected" class="leon-box p-4 sm:p-6">
-    <div class="leon-box-header flex flex-wrap items-center justify-between gap-2 font-silk text-[0.62rem]">
-      <span>&gt; {{ selected.tag || label(selected.category) }}</span>
-      <button type="button" class="leon-btn" @click="emit('close')">[ Retour à l'index ]</button>
-    </div>
+  <article v-if="reading && selected" class="leon-panel">
+    <h2 class="leon-panel-head">{{ selected.tag || label(selected.category) }}</h2>
+    <div class="leon-panel-body">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-[1rem] text-leon-dim">
+        <span>Réf. {{ selected.id }}</span>
+        <button type="button" class="leon-btn" @click="emit('close')">Retour à la liste</button>
+      </div>
 
-    <h1 class="font-silk text-base leading-relaxed text-leon-gold sm:text-lg">{{ selected.title }}</h1>
-    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.68rem] text-leon-dim">
-      <span>Par {{ 'Ousmane BA' }}</span>
-      <span>{{ monthLabel(selected.date) }}</span>
-      <span>{{ selected.readTime }} min</span>
-      <span>Réf. {{ selected.id }}</span>
-    </div>
-    <RichText
-      v-if="selected.abstract"
-      tag="p"
-      class="mt-3 border-l-2 border-leon-green/50 pl-3 text-[0.78rem] leading-relaxed text-leon-ink/75"
-      :text="selected.abstract"
-    />
-    <div v-if="selected.metrics" class="mt-3 bg-leon-dark/50 px-3 py-2 text-[0.72rem] text-leon-green">
-      <RichText :text="selected.metrics" />
-    </div>
+      <h1 class="leon-article-title mt-2 text-[1.55rem] sm:text-[1.9rem]">{{ selected.title }}</h1>
+      <p class="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[1.05rem] sm:gap-x-2">
+        <span class="text-leon-gold">Par {{ profile.name }}</span>
+        <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
+        <span class="text-leon-green">{{ moisCourt(selected.date) }}</span>
+        <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
+        <span class="text-leon-ink/80">{{ selected.readTime }} min de lecture</span>
+        <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
+        <span class="text-leon-gold">{{ label(selected.category) }}</span>
+      </p>
 
-    <div class="leon-prose mt-5" v-html="selected.html" />
+      <RichText
+        v-if="selected.abstract"
+        tag="p"
+        class="mt-3 border-l-2 border-leon-green/70 pl-3 text-[1.15rem] italic leading-tight text-leon-ink/85"
+        :text="selected.abstract"
+      />
+      <p v-if="selected.metrics" class="mt-3 border border-leon-green/40 bg-leon-dark/40 px-3 py-1 text-[1.05rem] text-leon-gold">
+        <RichText :text="selected.metrics" />
+      </p>
 
-    <div class="mt-6 flex flex-wrap gap-2 border-t border-leon-green/30 pt-4">
-      <button v-if="selected.bibtex" type="button" class="leon-btn" @click="emit('copy-bibtex')">
-        [ Copier BibTeX ]
-      </button>
-      <button v-if="selected.lab" type="button" class="leon-btn leon-btn-gold" @click="emit('open-lab', selected.lab)">
-        [ Ouvrir le simulateur ]
-      </button>
+      <div class="leon-prose mt-5" v-html="selected.html" />
+
+      <div class="leon-rule mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 pt-3">
+        <button v-if="selected.bibtex" type="button" class="leon-btn" @click="emit('copy-bibtex')">Copier BibTeX</button>
+        <button v-if="selected.lab" type="button" class="leon-btn leon-btn-amber" @click="emit('open-lab', selected.lab)">
+          Ouvrir le simulateur
+        </button>
+      </div>
+      <nav class="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2" aria-label="Autres articles">
+        <RouterLink
+          v-if="older"
+          :to="{ name: 'article', params: { slug: older.slug } }"
+          class="block border border-leon-green/40 px-2 py-1 hover:bg-leon-green/10"
+        >
+          <span class="block text-[1rem] text-leon-dim">&lt;&lt; Plus ancien</span>
+          <span class="block truncate text-[1.1rem] text-leon-cyan">{{ older.title }}</span>
+        </RouterLink>
+        <span v-else class="hidden sm:block" />
+        <RouterLink
+          v-if="newer"
+          :to="{ name: 'article', params: { slug: newer.slug } }"
+          class="block border border-leon-green/40 px-2 py-1 hover:bg-leon-green/10 sm:text-right"
+        >
+          <span class="block text-[1rem] text-leon-dim">Plus récent &gt;&gt;</span>
+          <span class="block truncate text-[1.1rem] text-leon-cyan">{{ newer.title }}</span>
+        </RouterLink>
+      </nav>
     </div>
   </article>
 
-  <!-- Index -->
-  <div v-else class="space-y-4">
-    <div class="leon-box p-3">
-      <div class="flex flex-wrap items-center gap-2 text-[0.7rem]">
-        <span class="text-leon-dim">FILTRE :</span>
+  <!-- Liste -->
+  <section v-else class="leon-panel">
+    <template v-if="mode === 'list'">
+      <h2 class="leon-panel-head">Articles — {{ shown.length }} / {{ articles.length }}</h2>
+      <form class="flex items-center gap-2 px-2.5 pt-1.5 text-[1.08rem]" role="search" @submit.prevent>
+        <label for="leon-list-q" class="shrink-0 text-leon-green">&gt;&gt; Rechercher&nbsp;:</label>
+        <input
+          id="leon-list-q"
+          type="search"
+          class="leon-field"
+          placeholder="titre, sujet, mot-clé…"
+          autocomplete="off"
+          :value="query"
+          @input="emit('update:query', $event.target.value)"
+        />
+      </form>
+      <div class="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 pb-1.5 pt-1 text-[1.05rem]">
+        <span class="text-leon-dim">Filtre&nbsp;:</span>
         <button type="button" class="leon-btn" :class="filter === 'all' ? 'leon-btn-on' : ''" @click="emit('update:filter', 'all')">
           Tous ({{ articles.length }})
         </button>
@@ -72,37 +135,44 @@ const label = (id) => categories.find((c) => c.id === id)?.label ?? id
           :class="filter === c.id ? 'leon-btn-on' : ''"
           @click="emit('update:filter', c.id)"
         >
-          {{ c.label }}
+          {{ c.label }} ({{ count(c.id) }})
         </button>
       </div>
-    </div>
+    </template>
 
-    <article v-for="a in shown" :key="a.slug" class="leon-box p-3 sm:p-4">
-      <div class="flex gap-3 sm:gap-4">
-        <div class="h-20 w-20 shrink-0 border border-leon-green/40 sm:h-24 sm:w-24">
-          <PixelThumb :seed="a.slug" :tone="TONES[a.category] ?? 'green'" />
+    <ul class="divide-y divide-leon-green/40" :class="mode === 'list' ? 'border-t border-leon-green/40' : ''">
+      <li v-for="a in shown" :key="a.slug" class="flow-root p-2.5 sm:flex sm:gap-4 sm:p-3.5">
+        <!-- Sur téléphone la vignette flotte : le résumé reprend toute la largeur dessous -->
+        <RouterLink
+          :to="{ name: 'article', params: { slug: a.slug } }"
+          class="leon-thumb float-left mb-1 mr-3 h-[60px] w-20 sm:float-none sm:m-0 sm:h-[78px] sm:w-[104px] sm:shrink-0"
+          tabindex="-1"
+          aria-hidden="true"
+        >
+          <PixelIcon :icon="iconOf(a)" />
+        </RouterLink>
+        <div class="sm:min-w-0 sm:flex-1">
+          <h3 class="text-[1.32rem] leading-tight sm:text-[1.5rem]">
+            <RouterLink :to="{ name: 'article', params: { slug: a.slug } }" class="leon-article-title">{{ a.title }}</RouterLink>
+          </h3>
+          <p class="mt-1 flex flex-wrap gap-x-3 text-[1.02rem] leading-tight sm:gap-x-2 sm:text-[1.08rem]">
+            <span class="text-leon-gold">Par {{ profile.name }}</span>
+            <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
+            <span class="text-leon-green">{{ moisCourt(a.date) }}</span>
+            <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
+            <span class="text-leon-gold">{{ label(a.category) }}</span>
+          </p>
+          <p class="mt-1.5 line-clamp-3 text-[1.1rem] leading-tight text-leon-ink/85 sm:line-clamp-2">{{ a.abstract }}</p>
+          <RouterLink :to="{ name: 'article', params: { slug: a.slug } }" class="leon-btn -ml-1 mt-1">
+            Lire la suite...<span class="sr-only"> : {{ a.title }}</span>
+          </RouterLink>
         </div>
-        <div class="min-w-0 flex-1">
-          <button
-            type="button"
-            class="block text-left font-silk text-[0.74rem] leading-relaxed text-leon-gold hover:text-leon-bright sm:text-[0.82rem]"
-            @click="emit('select', a.slug)"
-          >
-            {{ a.title }}
-          </button>
-          <div class="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[0.66rem] text-leon-dim">
-            <span>Par Ousmane BA</span>
-            <span>{{ monthLabel(a.date) }}</span>
-            <span class="text-leon-green">{{ a.tag || label(a.category) }}</span>
-          </div>
-          <p class="mt-2 line-clamp-2 text-[0.74rem] leading-relaxed text-leon-ink/70">{{ a.abstract }}</p>
-          <button type="button" class="mt-2 text-[0.7rem] text-leon-green hover:text-leon-bright" @click="emit('select', a.slug)">
-            [ Lire la suite → ]
-          </button>
-        </div>
-      </div>
-    </article>
+      </li>
+    </ul>
 
-    <p v-if="!shown.length" class="leon-box p-4 text-[0.75rem] text-leon-dim">Aucun article dans ce domaine.</p>
-  </div>
+    <p v-if="!shown.length" class="leon-panel-body text-[1.1rem] text-leon-dim">
+      Aucun article ne correspond.
+      <button type="button" class="leon-btn" @click="resetList">Tout afficher</button>
+    </p>
+  </section>
 </template>

@@ -43,6 +43,7 @@ function toArticle([path, raw]) {
     abstract: data.abstract ?? '',
     metrics: data.metrics ?? '',
     lab: data.lab ?? null,
+    icon: data.icon ?? null,
     bibtex: String(data.bibtex ?? '').trim(),
     draft: data.draft === true,
     html: renderMarkdown(body),

@@ -19,7 +19,7 @@ Six formes existent aujourd'hui :
 | 3 | `planche`           | Planche de bureau d'études : papier millimétré, cartouche, tirage ou cyanotype |
 | 4 | `mission`           | Contrôle de mission : radar orbital, télémétrie, essaim MCP, terminal Ctrl+K  |
 | 5 | `crt`               | Tube cathodique : phosphore cyan, lignes de balayage, pluie de caractères     |
-| 6 | `leontechlab`       | Portail rétro : phosphore vert, barre beige 90s, bandeau en pixel art        |
+| 6 | `leontechlab`       | Console rétro : phosphore vert, menus « >> », bandeau lunaire en pixel art   |
 
 Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
 `src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
@@ -208,6 +208,7 @@ abstract: >-
   Résumé affiché dans la liste et en tête de l'article.
 metrics: "WER -34.2% | Dataset: AudioSheet IA"   # optionnel
 lab: pulaar                   # optionnel : weibull | pulaar | glitch — ajoute un lien vers le simulateur
+icon: globe                   # optionnel : vignette de la forme LeonTechLab — computer | satellite | globe | gear
 readTime: 9                   # optionnel : sinon estimé automatiquement
 draft: false                  # true = non publié
 bibtex: |
@@ -230,7 +231,8 @@ def exemple():
 ```
 
 Profil, projets, dépôts et systèmes se modifient dans `src/content/profile.js` et
-`src/content/projects.js`.
+`src/content/projects.js`. Le nom, le pseudo, le titre (`role`) et la photo (`avatar`)
+du profil reprennent ceux de github.com/leonbathie ; la photo est facultative.
 
 ---
 

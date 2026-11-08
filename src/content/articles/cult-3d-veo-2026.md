@@ -2,6 +2,7 @@
 title: "Préservation Algorithmique du Patrimoine Oral : Des Fables de Bouki et Leuk à la Synthèse Vidéo 3D"
 date: "2026-03"
 category: speech-ai
+icon: globe
 tag: "GENERATIVE MEDIA & CULTURAL COMPUTING"
 readTime: 6
 abstract: >-
