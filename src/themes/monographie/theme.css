@@ -160,6 +160,103 @@ html.mono-turbo {
   box-shadow: 0 1px 0 #7c2d12;
 }
 
+/* ---------- Tableau de bord : pause, plein écran, progression ---------- */
+.mono-arcade-hud {
+  position: relative;
+}
+.mono-arcade-hud-btn {
+  min-width: 2rem;
+  min-height: 1.6rem;
+  padding: 0 0.4rem;
+  font: 0.6rem 'Press Start 2P', monospace;
+  color: #fde68a;
+  background: #3f2a16;
+  border: 1px solid #92400e;
+  border-radius: 4px;
+}
+.mono-arcade-hud-btn:hover {
+  background: #5a3a1c;
+}
+.mono-arcade-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: rgb(245 158 11 / 0.15);
+}
+.mono-arcade-progress-bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to right, #d97706, #fde68a);
+  transition: width 0.25s linear;
+}
+
+/* ---------- Zones tactiles sur l'image ----------
+   Moitié gauche : courir ; moitié droite : sauter. Transparentes, elles ne
+   cachent rien du jeu ; un léger voile confirme l'appui. */
+.mono-arcade-zones {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.mono-arcade-zone {
+  position: relative;
+  touch-action: none; /* le doigt maintenu ne doit pas faire défiler la page */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.mono-arcade-zone + .mono-arcade-zone {
+  border-left: 1px dashed rgb(253 230 138 / 0.12);
+}
+.mono-arcade-zone:active,
+.mono-arcade-zone-on {
+  background: rgb(251 191 36 / 0.07);
+}
+.mono-arcade-zone-hint {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.3rem 0.6rem;
+  font: 0.55rem 'Press Start 2P', monospace;
+  color: #fde68a;
+  background: rgb(24 24 27 / 0.6);
+  border-radius: 4px;
+  white-space: nowrap;
+  animation: mono-zone-hint 0.9s ease-in-out infinite alternate;
+}
+@keyframes mono-zone-hint {
+  to {
+    opacity: 0.45;
+  }
+}
+
+/* ---------- Plein écran ----------
+   Le jeu seul, centré sur fond noir ; en paysage, l'image prend toute la
+   hauteur (16/9) et les zones tactiles remplacent les touches du bas. */
+.mono-arcade-stage:fullscreen,
+.mono-arcade-full {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #000;
+  border: 0;
+}
+.mono-arcade-stage:fullscreen .mono-arcade-view {
+  width: min(100vw, 177.78vh);
+  margin: 0 auto;
+}
+.mono-arcade-stage:fullscreen .mono-arcade-hud {
+  width: min(100vw, 177.78vh);
+  margin: 0 auto;
+}
+.mono-arcade-stage:fullscreen .mono-arcade-pad {
+  display: none;
+}
+
 /* ---------- Commandes tactiles ----------
    Inutiles au clavier : affichées seulement si le pointeur est grossier. */
 .mono-arcade-pad {

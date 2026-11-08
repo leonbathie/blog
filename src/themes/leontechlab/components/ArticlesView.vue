@@ -153,7 +153,7 @@ const newer = computed(() => (index.value > 0 ? articles.value[index.value - 1] 
         <!-- Sur téléphone la vignette flotte : le résumé reprend toute la largeur dessous -->
         <RouterLink
           :to="{ name: 'article', params: { slug: a.slug } }"
-          class="leon-thumb float-left mb-1 mr-3 h-[60px] w-20 sm:float-none sm:m-0 sm:h-[78px] sm:w-[104px] sm:shrink-0"
+          class="leon-thumb float-left mb-1 mr-3 h-[62px] w-[82px] sm:float-none sm:m-0 sm:h-[98px] sm:w-[130px] sm:shrink-0"
           tabindex="-1"
           aria-hidden="true"
         >

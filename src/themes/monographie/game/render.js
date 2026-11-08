@@ -277,7 +277,7 @@ function exitTerminal(ctx, state, cam, t) {
 }
 
 /** L'ingénieur : casque à visière, plastron clair, sac dorsal */
-function player(ctx, state) {
+function player(ctx, state, scale = [1, 1]) {
   const p = state.player
   const x = Math.round(p.x)
   const y = Math.round(p.y)
@@ -286,6 +286,14 @@ function player(ctx, state) {
   const flip = p.dir < 0
 
   ctx.save()
+  if (scale[0] !== 1 || scale[1] !== 1) {
+    // Tassement ou étirement autour des pieds : l'ancrage au sol ne bouge pas
+    const fx = x + p.w / 2
+    const fy = y + p.h
+    ctx.translate(fx, fy)
+    ctx.scale(scale[0], scale[1])
+    ctx.translate(-fx, -fy)
+  }
   if (flip) {
     ctx.translate(x + p.w, 0)
     ctx.scale(-1, 1)
@@ -365,12 +373,16 @@ function player(ctx, state) {
  * @param {{x: number, y: number}} cam  caméra, en pixels monde
  * @param {number} t      compteur d'images, pour les animations
  */
-export function draw(ctx, state, cam, t) {
+export function draw(ctx, state, cam, t, fx = null) {
   ctx.imageSmoothingEnabled = false
   sky(ctx)
   // Par précaution : sans grille chargée, on s'arrête au ciel plutôt que de jeter
   if (!state.tiles?.length) return
+  const [sx, sy] = fx ? fx.offset(t) : [0, 0]
+  ctx.save()
+  ctx.translate(sx, sy)
   parallax(ctx, cam)
+  drawExitGuide(ctx, state, cam, t)
 
   ctx.save()
   ctx.translate(-Math.round(cam.x), -Math.round(cam.y))
@@ -379,7 +391,9 @@ export function draw(ctx, state, cam, t) {
   spikes(ctx, state, cam, t)
   walkers(ctx, state, cam, t)
   exitTerminal(ctx, state, cam, t)
-  player(ctx, state)
+  if (fx) fx.drawWorld(ctx)
+  player(ctx, state, fx ? fx.scale() : [1, 1])
+  ctx.restore()
   ctx.restore()
 
   // Voile rouge au moment de la perte
@@ -387,4 +401,126 @@ export function draw(ctx, state, cam, t) {
     ctx.fillStyle = 'rgba(127, 29, 29, 0.35)'
     ctx.fillRect(0, 0, VIEW_W, VIEW_H)
   }
+}
+
+/* =====================================================================
+   Effets visuels : particules, secousse et tassement du personnage.
+   Pur affichage : rien ici ne touche au moteur ni au déroulement du jeu.
+   ===================================================================== */
+
+/** Pseudo-aléa déterministe pour les effets, afin que deux parties se ressemblent */
+function noise(seed) {
+  let s = seed | 0 || 1
+  return () => {
+    s ^= s << 13
+    s ^= s >>> 17
+    s ^= s << 5
+    return (s >>> 0) / 4294967296
+  }
+}
+
+export function createEffects() {
+  const parts = []
+  const rnd = noise(221)
+  let shake = 0
+  let squash = 0 // > 0 tassé (atterrissage), < 0 étiré (saut) ; revient vers 0
+
+  function burst(x, y, count, spec) {
+    for (let i = 0; i < count; i++) {
+      const a = spec.angle + (rnd() - 0.5) * spec.spread
+      const v = spec.speed * (0.5 + rnd())
+      parts.push({
+        x,
+        y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        g: spec.gravity ?? 0.12,
+        life: spec.life,
+        max: spec.life,
+        color: spec.colors[Math.floor(rnd() * spec.colors.length)],
+        size: spec.size ?? 1,
+      })
+    }
+  }
+
+  return {
+    /** Lit les événements du pas courant (après le son, dans ArcadeStage) */
+    push(events) {
+      for (const e of events) {
+        if (e.type === 'land') {
+          const k = Math.min(1, (e.speed ?? 0) / 9)
+          squash = 4 + k * 5
+          burst(e.x, e.y, 4 + Math.round(k * 5), { angle: -Math.PI / 2, spread: Math.PI, speed: 0.9 + k, gravity: 0.08, life: 18, colors: ['#fde68a', '#d6b370', '#9a6b3a'] })
+        } else if (e.type === 'jump') {
+          squash = -6
+          burst(e.x, e.y, 3, { angle: Math.PI / 2, spread: 2.4, speed: 0.6, gravity: 0.05, life: 12, colors: ['#d6b370', '#9a6b3a'] })
+        } else if (e.type === 'chip') {
+          burst(e.x, e.y, 10, { angle: -Math.PI / 2, spread: Math.PI * 2, speed: 1.4, gravity: 0.04, life: 26, colors: ['#fde68a', '#fbbf24', '#ffffff'], size: 1 })
+        } else if (e.type === 'stomp') {
+          shake = Math.max(shake, 3)
+          burst(e.x, e.y, 10, { angle: -Math.PI / 2, spread: Math.PI, speed: 1.8, gravity: 0.15, life: 24, colors: ['#f87171', '#7f1d1d', '#fef08a'], size: 2 })
+        } else if (e.type === 'die') {
+          shake = Math.max(shake, 9)
+          burst(e.x, e.y, 16, { angle: -Math.PI / 2, spread: Math.PI * 2, speed: 2.2, gravity: 0.14, life: 34, colors: ['#fb923c', '#fed7aa', '#a5f3fc', '#7c2d12'], size: 2 })
+        } else if (e.type === 'cleared') {
+          burst(VIEW_W / 2, 20, 0, { angle: 0, spread: 0, speed: 0, life: 1, colors: ['#fff'] })
+        }
+      }
+    },
+    /** Un pas d'animation (appelé à chaque image) */
+    update() {
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const q = parts[i]
+        q.x += q.vx
+        q.y += q.vy
+        q.vy += q.g
+        q.vx *= 0.96
+        q.life -= 1
+        if (q.life <= 0) parts.splice(i, 1)
+      }
+      shake *= 0.82
+      if (shake < 0.3) shake = 0
+      squash *= 0.78
+      if (Math.abs(squash) < 0.3) squash = 0
+    },
+    /** Décalage de secousse pour cette image, en pixels */
+    offset(t) {
+      if (!shake) return [0, 0]
+      return [Math.round(Math.sin(t * 2.7) * shake), Math.round(Math.cos(t * 3.1) * shake * 0.6)]
+    },
+    /** Facteurs d'échelle du personnage : [largeur, hauteur], autour de ses pieds */
+    scale() {
+      const k = squash / 9
+      return [1 + k * 0.22, 1 - k * 0.3]
+    },
+    drawWorld(ctx) {
+      for (const q of parts) {
+        ctx.globalAlpha = Math.min(1, q.life / (q.max * 0.5))
+        ctx.fillStyle = q.color
+        ctx.fillRect(Math.round(q.x), Math.round(q.y), q.size, q.size)
+      }
+      ctx.globalAlpha = 1
+    },
+  }
+}
+
+/** Faisceau au-dessus du terminal, et flèche au bord quand il est hors champ */
+export function drawExitGuide(ctx, state, cam, t) {
+  const e = state.exit
+  const beamX = Math.round(e.x + e.w / 2 - cam.x)
+  if (beamX > -8 && beamX < VIEW_W + 8) {
+    const top = Math.round(e.y - cam.y)
+    const g = ctx.createLinearGradient(0, 0, 0, top)
+    g.addColorStop(0, 'rgba(253, 230, 138, 0)')
+    g.addColorStop(1, `rgba(253, 230, 138, ${(0.18 + 0.08 * Math.sin(t / 9)).toFixed(2)})`)
+    ctx.fillStyle = g
+    ctx.fillRect(beamX - 4, 0, 8, Math.max(0, top))
+    return
+  }
+  if (state.phase !== 'playing' || e.x < cam.x) return
+  if (Math.floor(t / 20) % 2) return
+  const y = Math.round(Math.max(12, Math.min(VIEW_H - 12, e.y + e.h / 2 - cam.y)))
+  ctx.fillStyle = '#fde68a'
+  for (let i = 0; i < 5; i++) ctx.fillRect(VIEW_W - 12 + i, y - (4 - i), 1, (4 - i) * 2 + 1)
+  ctx.fillRect(VIEW_W - 16, y - 1, 4, 3)
 }

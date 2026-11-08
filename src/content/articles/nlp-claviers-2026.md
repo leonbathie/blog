@@ -2,7 +2,7 @@
 title: "Tokenisation Phonétique & Collecte Vocale Distribuée pour les Langues Atlantiques et Mandé"
 date: "2026-08"
 category: speech-ai
-icon: globe
+icon: phone
 tag: "AI-NLP // LINGOO & CLAVIERS SOUVERAINS"
 abstract: >-
   Architecture unifiée reliant 6 claviers mobiles natifs (Fulfuldekey, Wolofkey, Joolakey,

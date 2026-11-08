@@ -2,6 +2,7 @@
 title: "De la GMAO passive à l'ordonnancement prédictif : Réduire les arrêts de 25% en ligne d'embouteillage"
 date: "2026-08"
 category: industrial
+icon: factory
 tag: "CYBER-PHYSICAL SYSTEMS & RELIABILITY"
 readTime: 7
 abstract: >-

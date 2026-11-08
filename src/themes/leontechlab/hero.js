@@ -17,6 +17,8 @@
  * téléphone, où le titre HTML s'intercale entre le ciel et le sol lunaire.
  */
 
+import { clamp, dither, FONT, hash, lerp, paintEarth, rgb, shade, smooth } from './pixel.js'
+
 /* Positions en fraction de la grille (x : largeur, y et r : hauteur) */
 export const LAYOUTS = {
   wide: {
@@ -48,11 +50,6 @@ export const LAYOUTS = {
 }
 
 /* ---------- Palette ---------- */
-// Une couleur = un entier 32 bits, dans l'ordre des octets d'ImageData (petit-boutiste).
-const rgb = (hex) => {
-  const n = parseInt(hex.slice(1), 16)
-  return (0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | ((n >> 16) & 0xff)) >>> 0
-}
 const C = {
   sky: rgb('#000000'),
   white: rgb('#ffffff'),
@@ -69,24 +66,6 @@ const C = {
   hill: rgb('#2fbf4a'),
   hillDark: rgb('#1f8a34'),
   panel: rgb('#5fb4f0'),
-  // Terre
-  seaDeep: rgb('#0b2552'),
-  sea: rgb('#1b4f9c'),
-  seaLight: rgb('#3a7bd5'),
-  seaHi: rgb('#8fc3ff'),
-  landDark: rgb('#145c22'),
-  land: rgb('#2e9a3c'),
-  landLight: rgb('#6ad35a'),
-  desertDark: rgb('#8a6f33'),
-  desert: rgb('#c9a95b'),
-  desertLight: rgb('#e8cf86'),
-  iceDark: rgb('#9cb8cc'),
-  ice: rgb('#e8f6ff'),
-  night: rgb('#03091a'),
-  cloud: rgb('#ffffff'),
-  cloudShade: rgb('#9cb8cc'),
-  atmo: rgb('#9fe0ff'),
-  atmoDark: rgb('#1b3f78'),
   // Lune
   moonEdge: rgb('#d6d6d6'),
   moonLight: rgb('#a9a9a9'),
@@ -120,119 +99,6 @@ const C = {
 }
 const STAR = [rgb('#3b4a3f'), rgb('#9fb3a6'), rgb('#eafff0')]
 const MOON = [C.moonDeep, C.moonDark, C.moonMid]
-
-/* ---------- Outils de pixel ---------- */
-const DEG = 180 / Math.PI
-const clamp = (v, a, b) => (v < a ? a : v > b ? b : v)
-const smooth = (v) => {
-  const k = clamp(v, 0, 1)
-  return k * k * (3 - 2 * k)
-}
-const lerp = (a, b, k) => a + (b - a) * k
-
-/** Bruit déterministe : même case, même valeur, d'une image à l'autre */
-function hash(x, y) {
-  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-}
-
-/** Tramage ordonné 4 × 4 : la demi-teinte devient un motif de pixels */
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
-const dither = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)] + 0.5
-
-/** Teinte tramée entre plusieurs tons, v de 0 (le plus sombre) à 1 */
-function shade(tones, v, x, y) {
-  const level = clamp(v, 0, 1) * (tones.length - 1)
-  const base = Math.floor(level)
-  return tones[Math.min(tones.length - 1, base + (dither(x, y, level - base) ? 1 : 0))]
-}
-
-/* Police 5 × 7 pour le sigle de l'écusson */
-const FONT = {
-  L: ['1....', '1....', '1....', '1....', '1....', '1....', '11111'],
-  T: ['11111', '..1..', '..1..', '..1..', '..1..', '..1..', '..1..'],
-}
-
-/* ---------- Planisphère grossier, pour la Terre qui tourne ---------- */
-// [longitude, latitude, demi-axe en longitude, demi-axe en latitude, nature]
-// nature : 0 végétation, 1 désert, 2 glace
-const LAND = [
-  [-8, 13, 11, 6, 0], // Afrique de l'Ouest, Sénégal compris
-  [22, -2, 14, 12, 0],
-  [26, -18, 11, 11, 0],
-  [17, 19, 27, 12, 1], // Sahara
-  [44, 9, 6, 5, 1],
-  [47, -19, 2.5, 7, 0],
-  [14, 50, 16, 8, 0],
-  [-4, 40, 5, 4, 0],
-  [17, 63, 7, 7, 0],
-  [-2, 54, 2.5, 4, 0],
-  [12, 43, 3, 4, 0],
-  [95, 60, 50, 12, 0],
-  [105, 34, 18, 12, 0],
-  [78, 21, 8, 10, 0],
-  [103, 15, 6, 8, 0],
-  [160, 60, 6, 6, 0],
-  [138, 37, 2.5, 5, 0],
-  [114, 0, 4, 4, 0],
-  [102, -1, 6, 3, 0],
-  [140, -5, 7, 3, 0],
-  [80, 45, 30, 9, 1],
-  [46, 24, 9, 8, 1],
-  [55, 33, 8, 5, 1],
-  [146, -19, 6, 8, 0],
-  [134, -25, 17, 9, 1],
-  [172, -41, 2.5, 5, 0],
-  [-100, 52, 28, 13, 0],
-  [-100, 37, 20, 9, 0],
-  [-152, 64, 12, 6, 0],
-  [-85, 70, 25, 6, 0],
-  [-87, 13, 4, 4, 0],
-  [-82, 28, 1.5, 3, 0],
-  [-60, -8, 17, 14, 0],
-  [-66, -32, 8, 14, 0],
-  [-70, 4, 9, 6, 0],
-  [-112, 32, 7, 6, 1],
-  [-103, 23, 7, 7, 1],
-  [-70, -48, 4, 7, 1],
-  [-42, 72, 13, 10, 2], // Groenland
-]
-const MAP_W = 180
-const MAP_H = 90
-const MAP = new Uint8Array(MAP_W * MAP_H) // 0 mer, 1 végétation, 2 désert, 3 glace
-for (let j = 0; j < MAP_H; j++) {
-  const lat = 90 - (j + 0.5) * 2
-  for (let i = 0; i < MAP_W; i++) {
-    const lon = -180 + (i + 0.5) * 2
-    let v = lat > 78 || lat < -66 ? 3 : 0
-    if (!v) {
-      // Côtes un peu irrégulières : sans ce bruit, les continents seraient des ovales
-      const ragged = 1 + (hash(i, j) - 0.5) * 0.4
-      for (const [clon, clat, rx, ry, kind] of LAND) {
-        const dl = ((((lon - clon + 540) % 360) + 360) % 360) - 180
-        if ((dl / rx) ** 2 + ((lat - clat) / ry) ** 2 <= ragged) {
-          v = kind === 2 ? 3 : kind === 1 ? 2 : 1
-          if (kind === 0) break
-        }
-      }
-    }
-    MAP[j * MAP_W + i] = v
-  }
-}
-function mapAt(lon, lat) {
-  const i = Math.floor((((lon + 180) % 360) + 360) % 360 / 2) % MAP_W
-  const j = clamp(Math.floor((90 - lat) / 2), 0, MAP_H - 1)
-  return MAP[j * MAP_W + i]
-}
-// Bancs nuageux qui dérivent vers l'est : [longitude, latitude, demi-axes, vitesse]
-const CLOUDS = [
-  [-30, 8, 22, 4, 0.5],
-  [60, -14, 26, 5, 0.35],
-  [150, 42, 18, 5, 0.7],
-  [-120, -36, 24, 4, 0.45],
-  [100, 56, 28, 5, 0.25],
-]
 
 /* ---------- Le bandeau ---------- */
 export function createHero(canvas, { compact = false } = {}) {
@@ -640,45 +506,7 @@ export function createHero(canvas, { compact = false } = {}) {
   /* ---------- Terre ---------- */
   function drawEarth() {
     const { x: cx, y: cy, r } = S.earth
-    const spin = reduced.matches ? 20 : t * 0.35
-    const outer = ((r + 1.3) / r) ** 2
-    for (let dy = -r - 1; dy <= r + 1; dy++) {
-      for (let dx = -r - 1; dx <= r + 1; dx++) {
-        const x = cx + dx
-        const y = cy + dy
-        const nx = (dx + 0.5) / r
-        const ny = (dy + 0.5) / r
-        const d2 = nx * nx + ny * ny
-        if (d2 > 1) {
-          // Halo atmosphérique d'un pixel, éclairé du côté du soleil
-          if (d2 <= outer) put(x, y, nx * -0.6 + ny * -0.4 > -0.15 ? C.atmo : C.atmoDark)
-          continue
-        }
-        const nz = Math.sqrt(1 - d2)
-        const light = clamp(nx * -0.55 + ny * -0.42 + nz * 0.72, 0, 1)
-        const lat = Math.asin(-ny) * DEG
-        const lon = Math.atan2(nx, nz) * DEG + spin
-        let c
-        if (light < 0.07) c = C.night
-        else {
-          const kind = mapAt(lon, lat)
-          if (kind === 1) c = shade([C.landDark, C.land, C.landLight], light, x, y)
-          else if (kind === 2) c = shade([C.desertDark, C.desert, C.desertLight], light, x, y)
-          else if (kind === 3) c = shade([C.iceDark, C.ice], light * 1.2, x, y)
-          else c = light > 0.93 ? C.seaHi : shade([C.seaDeep, C.sea, C.seaLight], light, x, y)
-          // Nuages
-          for (const [clon, clat, rx, ry, sp] of CLOUDS) {
-            const dl = ((((lon - clon - (reduced.matches ? 0 : t * sp) + 540) % 360) + 360) % 360) - 180
-            const e = (dl / rx) ** 2 + ((lat - clat) / ry) ** 2
-            if (e < 1 && dither(x, y, (1 - e) * 0.9)) {
-              c = light > 0.35 ? C.cloud : C.cloudShade
-              break
-            }
-          }
-        }
-        put(x, y, c)
-      }
-    }
+    paintEarth(put, { cx, cy, r, spin: reduced.matches ? 20 : t * 0.35, drift: reduced.matches ? 0 : t })
   }
 
   /* ---------- Étoiles ---------- */
