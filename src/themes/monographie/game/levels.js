@@ -89,9 +89,14 @@ function block(...positions) {
   return [place(chips), place(slabs)]
 }
 
-function build(name, hint, rows) {
+/**
+ * @param hint       conseil affiché au clavier
+ * @param hintTouch  variante affichée sur écran tactile ; parler de « Espace »
+ *                   à quelqu'un qui joue au doigt n'aide personne.
+ */
+function build(name, hint, rows, hintTouch = null) {
   if (rows.length !== LEVEL_H) throw new Error(`Niveau « ${name} » : ${rows.length} rangées au lieu de ${LEVEL_H}`)
-  return { name, hint, grid: rows }
+  return { name, hint, hintTouch: hintTouch ?? hint, grid: rows }
 }
 
 const [l1chipsHigh, l1deckHigh] = ledge(20, 47)
@@ -132,7 +137,7 @@ export const LEVELS = [
     ground(30),
     ground(30),
     ground(30),
-  ]),
+  ], 'Touches ◀ ▶ pour courir, SAUT pour sauter.'),
 
   build('02 — Baie de brassage', 'Maintenir Espace saute plus haut.', [
     NONE,
@@ -154,7 +159,7 @@ export const LEVELS = [
     ground(26, 50),
     ground(26, 50),
     ground(26, 50),
-  ]),
+  ], 'Garder SAUT enfoncé saute plus haut.'),
 
   build('03 — Salle blanche', 'Retomber sur un patrouilleur le neutralise.', [
     NONE,

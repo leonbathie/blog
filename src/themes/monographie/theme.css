@@ -128,10 +128,11 @@ html.mono-turbo {
 }
 
 /* ---------- Aire de jeu ----------
-   Le canevas fait 480 × 272 pixels logiques, agrandis en CSS : les pixels
-   restent francs et le dessin coûte peu, même sur un téléphone. */
+   Le canevas fait 320 × 180 pixels logiques, agrandis en CSS. 320 est choisi
+   pour rester SOUS la largeur d'un téléphone : à 480, l'image était réduite
+   (0,71×) et le rendu pixelisé supprimait des rangées entières de pixels. */
 .mono-arcade-canvas {
-  aspect-ratio: 480 / 272;
+  aspect-ratio: 16 / 9;
   background: #171029;
   touch-action: manipulation; /* pas de zoom au double-tap pendant la partie */
   cursor: pointer;

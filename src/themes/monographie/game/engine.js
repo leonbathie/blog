@@ -366,11 +366,31 @@ export function createGame() {
     return state
   }
 
-  /** Position de caméra souhaitée pour une fenêtre de `viewW` pixels */
-  function cameraFor(viewW) {
-    const target = state.player.x + state.player.w / 2 - viewW / 2
-    state.camera = Math.max(0, Math.min(WORLD.w - viewW, target))
-    return state.camera
+  /**
+   * Caméra pour une fenêtre de viewW × viewH pixels.
+   *
+   * Horizontalement elle colle au joueur ; verticalement elle le suit avec une
+   * zone morte, sans quoi elle tressauterait à chaque petit saut. Elle est
+   * bornée au niveau : on ne voit jamais au-delà du décor.
+   */
+  const camera = { x: 0, y: 0 }
+  function cameraFor(viewW, viewH) {
+    const p = state.player
+    camera.x = Math.max(0, Math.min(WORLD.w - viewW, p.x + p.w / 2 - viewW / 2))
+
+    const maxY = Math.max(0, WORLD.h - viewH)
+    const focus = p.y + p.h / 2
+    const dead = viewH * 0.18
+    let top = camera.y
+    if (focus < top + viewH / 2 - dead) top = focus - viewH / 2 + dead
+    else if (focus > top + viewH / 2 + dead) top = focus - viewH / 2 - dead
+    top = Math.max(0, Math.min(maxY, top))
+    // Lissage : la caméra rattrape le joueur au lieu de le coller
+    camera.y += (top - camera.y) * 0.18
+    if (Math.abs(top - camera.y) < 0.5) camera.y = top
+
+    state.camera = camera.x
+    return camera
   }
 
   function drainEvents() {

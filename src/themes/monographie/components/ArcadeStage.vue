@@ -48,6 +48,20 @@ function sync() {
   view.frames = game.state.frames
 }
 
+/* Les consignes doivent parler des commandes dont le visiteur dispose :
+   « Espace » sur un téléphone n'aide personne. */
+const touchMode = ref(false)
+const hintText = computed(() => {
+  const level = LEVELS[view.levelIndex]
+  if (!level) return view.hint
+  return touchMode.value ? level.hintTouch : level.hint
+})
+const controlsText = computed(() =>
+  touchMode.value
+    ? 'Touches ◀ ▶ pour courir · SAUT pour sauter'
+    : '← → ou A/D pour courir · Espace pour sauter · P pause · R recommencer',
+)
+
 const running = computed(() => view.phase === 'playing' || view.phase === 'dying')
 const overlay = computed(() => (running.value ? (paused.value ? 'paused' : null) : view.phase))
 const chipsTaken = computed(() => view.chipsTotal - view.chipsLeft)
@@ -76,7 +90,7 @@ function render() {
   if (!el) return
   const ctx = el.getContext('2d')
   if (!ctx) return
-  draw(ctx, game.state, game.cameraFor(VIEW_W), frames)
+  draw(ctx, game.state, game.cameraFor(VIEW_W, VIEW_H), frames)
 }
 
 function frame(now) {
@@ -136,7 +150,7 @@ function primary() {
     game.start()
   }
   sync()
-  canvas.value?.focus()
+  focusCanvas()
 }
 
 const primaryLabel = computed(() => {
@@ -148,7 +162,7 @@ function restart() {
   rememberBest()
   game.start()
   sync()
-  canvas.value?.focus()
+  focusCanvas()
 }
 
 /* ---------- Clavier ---------- */
@@ -195,24 +209,66 @@ function onKeyUp(event) {
   event.preventDefault()
 }
 
-/* ---------- Commandes tactiles ---------- */
-function hold(action, on) {
-  input[action] = on
+/* ---------- Commandes tactiles ----------
+   `padPointers` compte les doigts posés sur les commandes. Sans ce compteur,
+   toucher une touche faisait perdre le focus au canevas, ce qui relâchait les
+   entrées et mettait le jeu en pause : le tactile était inutilisable. */
+let padPointers = 0
+
+function press(action, event) {
+  // L'entrée d'abord : elle ne doit dépendre d'aucune étape faillible.
+  padPointers += 1
+  input[action] = true
+  // Capture du pointeur : si le doigt glisse hors du bouton, c'est quand même
+  // lui qui recevra le relâchement, sinon la touche resterait enfoncée.
+  // Elle échoue sur certains pointeurs (événements synthétiques, pointeur déjà
+  // relâché) et lève alors : la partie ne doit pas s'arrêter pour si peu.
+  try {
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  } catch {
+    /* capture indisponible : pointerleave et pointercancel prennent le relais */
+  }
 }
+
+function release(action, event) {
+  if (input[action]) padPointers = Math.max(0, padPointers - 1)
+  input[action] = false
+  try {
+    event?.currentTarget?.releasePointerCapture?.(event.pointerId)
+  } catch {
+    /* rien à libérer */
+  }
+}
+
 function releaseAll() {
   input.left = false
   input.right = false
   input.jump = false
+  padPointers = 0
 }
 
 /* ---------- Cycle de vie ---------- */
-function onBlur() {
+function onBlur(event) {
+  // Un doigt posé sur les commandes, ou un focus qui reste dans le jeu, n'est
+  // pas une sortie : ni relâchement des touches, ni pause.
+  if (padPointers > 0) return
+  if (event?.relatedTarget && stage.value?.contains(event.relatedTarget)) return
   releaseAll()
   focused.value = false
   if (running.value) paused.value = true
 }
 function onFocus() {
   focused.value = true
+}
+
+/** Le focus clavier n'a de sens qu'au pointeur fin : au doigt, il ferait
+ *  remonter la page vers le canevas et ouvrirait parfois le clavier virtuel. */
+const coarse = () => window.matchMedia?.('(pointer: coarse)').matches
+function focusCanvas() {
+  if (!coarse()) canvas.value?.focus()
+}
+function onCanvasPointer(event) {
+  if (event.pointerType === 'mouse' || event.pointerType === 'pen') canvas.value?.focus()
 }
 function onVisibility() {
   if (document.hidden) {
@@ -243,10 +299,20 @@ watch(
   },
 )
 
+let pointerQuery = null
+function onPointerChange(event) {
+  touchMode.value = event.matches
+}
+
 onMounted(() => {
   sync()
   startLoop()
   document.addEventListener('visibilitychange', onVisibility)
+  pointerQuery = window.matchMedia?.('(pointer: coarse)')
+  if (pointerQuery) {
+    touchMode.value = pointerQuery.matches
+    pointerQuery.addEventListener?.('change', onPointerChange)
+  }
 
   // Crochet de test : permet à un robot de lire la position du joueur pour
   // décider quand sauter, tout en envoyant de vraies touches. `import.meta.env.DEV`
@@ -258,6 +324,7 @@ onBeforeUnmount(() => {
   stopLoop()
   rememberBest()
   document.removeEventListener('visibilitychange', onVisibility)
+  pointerQuery?.removeEventListener?.('change', onPointerChange)
 })
 
 defineExpose({ start: restart })
@@ -295,7 +362,7 @@ defineExpose({ start: restart })
           @keyup="onKeyUp"
           @blur="onBlur"
           @focus="onFocus"
-          @pointerdown="canvas?.focus()"
+          @pointerdown="onCanvasPointer"
         />
 
         <!-- Écrans -->
@@ -327,9 +394,7 @@ defineExpose({ start: restart })
 
           <button type="button" class="mono-arcade-btn" @click="primary">{{ primaryLabel }}</button>
 
-          <p v-if="overlay === 'title'" class="font-mono text-[10px] text-zinc-500">
-            ← → ou A/D pour courir · Espace pour sauter · P pause · R recommencer
-          </p>
+          <p v-if="overlay === 'title'" class="font-mono text-[10px] text-zinc-500">{{ controlsText }}</p>
         </div>
 
         <!-- Conseil de la salle, en jeu -->
@@ -337,7 +402,7 @@ defineExpose({ start: restart })
           v-else-if="view.phase === 'playing' && view.frames < 240"
           class="pointer-events-none absolute inset-x-0 top-2 text-center font-mono text-[10px] text-amber-200/80"
         >
-          {{ view.hint }}
+          {{ hintText }}
         </p>
       </div>
 
@@ -347,10 +412,10 @@ defineExpose({ start: restart })
           type="button"
           class="mono-arcade-key"
           aria-label="Aller à gauche"
-          @pointerdown.prevent="hold('left', true)"
-          @pointerup.prevent="hold('left', false)"
-          @pointerleave="hold('left', false)"
-          @pointercancel="hold('left', false)"
+          @pointerdown.prevent="press('left', $event)"
+          @pointerup="release('left', $event)"
+          @pointerleave="release('left', $event)"
+          @pointercancel="release('left', $event)"
         >
           ◀
         </button>
@@ -358,10 +423,10 @@ defineExpose({ start: restart })
           type="button"
           class="mono-arcade-key"
           aria-label="Aller à droite"
-          @pointerdown.prevent="hold('right', true)"
-          @pointerup.prevent="hold('right', false)"
-          @pointerleave="hold('right', false)"
-          @pointercancel="hold('right', false)"
+          @pointerdown.prevent="press('right', $event)"
+          @pointerup="release('right', $event)"
+          @pointerleave="release('right', $event)"
+          @pointercancel="release('right', $event)"
         >
           ▶
         </button>
@@ -369,10 +434,10 @@ defineExpose({ start: restart })
           type="button"
           class="mono-arcade-key mono-arcade-key-jump"
           aria-label="Sauter"
-          @pointerdown.prevent="hold('jump', true)"
-          @pointerup.prevent="hold('jump', false)"
-          @pointerleave="hold('jump', false)"
-          @pointercancel="hold('jump', false)"
+          @pointerdown.prevent="press('jump', $event)"
+          @pointerup="release('jump', $event)"
+          @pointerleave="release('jump', $event)"
+          @pointercancel="release('jump', $event)"
         >
           SAUT
         </button>
