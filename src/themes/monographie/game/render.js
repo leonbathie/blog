@@ -240,9 +240,12 @@ function player(ctx, state, cam) {
     ctx.translate(-x, 0)
   }
 
-  // Liseré sombre : détache la silhouette de la ville en contre-jour
-  ctx.fillStyle = 'rgba(23, 16, 41, 0.75)'
-  ctx.fillRect(x, y - 1, p.w, p.h + 2)
+  // Ombre de contact : ancre le personnage au sol sans l'enfermer dans un
+  // rectangle sombre, comme le ferait un fond plein sur toute sa boîte.
+  if (p.onGround) {
+    ctx.fillStyle = 'rgba(23, 16, 41, 0.45)'
+    ctx.fillRect(x + 1, y + p.h, p.w - 2, 1)
+  }
 
   // Jambes
   ctx.fillStyle = C.boot
