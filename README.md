@@ -10,7 +10,7 @@ src/themes/       les « formes » du blog                  — une par apparenc
 src/core/         le socle partagé (Markdown+formules, formes, labos, audio, horloge)
 ```
 
-Cinq formes existent aujourd'hui :
+Six formes existent aujourd'hui :
 
 | № | Forme               | Apparence                                                                     |
 |---|---------------------|-------------------------------------------------------------------------------|
@@ -19,6 +19,7 @@ Cinq formes existent aujourd'hui :
 | 3 | `planche`           | Planche de bureau d'études : papier millimétré, cartouche, tirage ou cyanotype |
 | 4 | `mission`           | Contrôle de mission : radar orbital, télémétrie, essaim MCP, terminal Ctrl+K  |
 | 5 | `crt`               | Tube cathodique : phosphore cyan, lignes de balayage, pluie de caractères     |
+| 6 | `leontechlab`       | Portail rétro : phosphore vert, barre beige 90s, bandeau en pixel art        |
 
 Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
 `src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,

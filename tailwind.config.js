@@ -27,6 +27,8 @@ export default {
         'term-display': ['var(--term-font-display)', 'sans-serif'],
         'term-mono': ['var(--term-font-mono)', 'monospace'],
         'term-body': ['var(--term-font-body)', 'sans-serif'],
+        vt: ['VT323', 'monospace'],
+        silk: ['Silkscreen', '"Press Start 2P"', 'monospace'],
       },
       colors: {
         // Forme « Monographie » : couleurs pilotées par des variables CSS (papier clair / obsidienne)
@@ -68,6 +70,19 @@ export default {
           dim: 'rgb(var(--term-dim) / <alpha-value>)',
           faint: 'rgb(var(--term-faint) / <alpha-value>)',
           line: 'rgb(var(--term-line) / <alpha-value>)',
+        },
+        // Forme « LeonTechLab » : terminal à phosphore vert, or et beige 90s
+        leon: {
+          bg: 'rgb(var(--leon-bg) / <alpha-value>)',
+          panel: 'rgb(var(--leon-panel) / <alpha-value>)',
+          green: 'rgb(var(--leon-green) / <alpha-value>)',
+          dim: 'rgb(var(--leon-dim) / <alpha-value>)',
+          dark: 'rgb(var(--leon-dark) / <alpha-value>)',
+          gold: 'rgb(var(--leon-gold) / <alpha-value>)',
+          bright: 'rgb(var(--leon-bright) / <alpha-value>)',
+          beige: 'rgb(var(--leon-beige) / <alpha-value>)',
+          sand: 'rgb(var(--leon-sand) / <alpha-value>)',
+          ink: 'rgb(var(--leon-ink) / <alpha-value>)',
         },
       },
     },

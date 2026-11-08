@@ -1,0 +1,277 @@
+/* =====================================================================
+   Forme 6 — « LeonTechLab »
+   Portail rétro : terminal à phosphore vert, barre de navigation beige
+   biseautée des années 90, cadres néon et bandeau d'accueil en pixel art.
+   Portée depuis la maquette « LeonTechLab v1.0 ».
+   ===================================================================== */
+
+html[data-theme='leontechlab'] {
+  --leon-bg: 3 9 5;
+  --leon-panel: 6 17 9;
+  --leon-green: 34 255 85;
+  --leon-dim: 20 153 51;
+  --leon-dark: 11 59 23;
+  --leon-gold: 245 184 65;
+  --leon-bright: 255 212 102;
+  --leon-beige: 221 208 184;
+  --leon-sand: 181 164 139;
+  --leon-ink: 234 234 234;
+
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
+html[data-theme='leontechlab'] body {
+  background-color: rgb(var(--leon-bg));
+  color: rgb(var(--leon-ink));
+  font-family: 'IBM Plex Mono', monospace;
+  /* Trame de points + lignes de balayage, comme un tube cathodique */
+  background-image:
+    radial-gradient(rgb(var(--leon-green) / 0.05) 1px, transparent 0),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.2) 50%, rgb(0 0 0 / 0.55) 50%);
+  background-size: 24px 24px, 100% 4px;
+  background-attachment: fixed;
+}
+
+.theme-leon ::selection {
+  background-color: rgb(var(--leon-green));
+  color: rgb(var(--leon-bg));
+}
+
+.theme-leon :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid rgb(var(--leon-gold));
+  outline-offset: 2px;
+}
+
+/* ---------- Cadre néon ---------- */
+.leon-box {
+  background: linear-gradient(180deg, rgb(8 22 12 / 0.94) 0%, rgb(4 11 6 / 0.98) 100%);
+  border: 1.5px solid rgb(var(--leon-green));
+  box-shadow:
+    0 0 8px rgb(var(--leon-green) / 0.18),
+    inset 0 0 12px rgb(var(--leon-green) / 0.06);
+}
+.leon-box-header {
+  border-bottom: 1.5px solid rgb(var(--leon-green));
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+  color: rgb(var(--leon-green));
+  text-shadow: 0 0 6px rgb(var(--leon-green) / 0.45);
+}
+
+/* ---------- Titre en relief ---------- */
+.leon-title {
+  font-family: Silkscreen, 'Press Start 2P', monospace;
+  color: #fff3d1;
+  text-shadow:
+    2px 2px 0 #d9822b,
+    4px 4px 0 #7a3e0a,
+    0 0 18px rgb(var(--leon-gold) / 0.55);
+  letter-spacing: 1px;
+}
+
+/* ---------- Barre de navigation beige, biseautée ---------- */
+.leon-navbar {
+  background: linear-gradient(180deg, #e8dec8 0%, #d2c2a8 50%, #c2b092 100%);
+  border-top: 2px solid #fff8eb;
+  border-left: 2px solid #fff8eb;
+  border-right: 2px solid #6e6049;
+  border-bottom: 2px solid #6e6049;
+  color: #1a1612;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.65);
+}
+.leon-nav-link {
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
+  color: #1a1612;
+  border: 2px solid transparent;
+  transition: background-color 0.12s;
+}
+.leon-nav-link:hover {
+  background: #efe7d6;
+}
+/* L'onglet courant est enfoncé : biseaux inversés, comme un bouton 90s */
+.leon-nav-link-on {
+  background: #c2b092;
+  border-top-color: #6e6049;
+  border-left-color: #6e6049;
+  border-right-color: #fff8eb;
+  border-bottom-color: #fff8eb;
+  font-weight: 700;
+}
+
+/* ---------- Champs et boutons ---------- */
+.leon-field {
+  width: 100%;
+  padding: 0.35rem 0.55rem;
+  background: rgb(var(--leon-bg));
+  border: 1px solid rgb(var(--leon-green) / 0.5);
+  color: rgb(var(--leon-green));
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+}
+.leon-field:focus {
+  outline: none;
+  border-color: rgb(var(--leon-gold));
+}
+
+/* Spécificité normale, et non :where() : le preflight de Tailwind impose
+   `button { font-family: inherit; font-size: 100% }` à 0,0,1. */
+.leon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: rgb(var(--leon-green));
+  background: rgb(var(--leon-dark) / 0.6);
+  border: 1px solid rgb(var(--leon-green) / 0.5);
+  transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+}
+.leon-btn:hover {
+  background: rgb(var(--leon-green) / 0.14);
+  border-color: rgb(var(--leon-green));
+}
+.leon-btn-on,
+.leon-btn-on:hover {
+  color: rgb(var(--leon-bg));
+  background: rgb(var(--leon-green));
+  border-color: rgb(var(--leon-green));
+  font-weight: 700;
+}
+.leon-btn-gold,
+.leon-btn-gold:hover {
+  color: #2a1a04;
+  background: rgb(var(--leon-gold));
+  border-color: rgb(var(--leon-bright));
+  font-weight: 700;
+}
+
+/* Curseurs : rail fin, pastille carrée verte */
+.theme-leon input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+.theme-leon input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: rgb(var(--leon-green) / 0.35);
+}
+.theme-leon input[type='range']::-moz-range-track {
+  height: 2px;
+  background: rgb(var(--leon-green) / 0.35);
+}
+.theme-leon input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -4px;
+  border-radius: 0;
+  background: rgb(var(--leon-green));
+  box-shadow: 0 0 8px rgb(var(--leon-green) / 0.8);
+}
+.theme-leon input[type='range']::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: 0;
+  border-radius: 0;
+  background: rgb(var(--leon-green));
+  box-shadow: 0 0 8px rgb(var(--leon-green) / 0.8);
+}
+
+/* ---------- Bandeau d'accueil ---------- */
+.leon-hero-canvas {
+  display: block;
+  width: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  aspect-ratio: 960 / 260;
+}
+
+/* ---------- Ascenseur ---------- */
+.theme-leon ::-webkit-scrollbar { width: 10px; height: 10px; }
+.theme-leon ::-webkit-scrollbar-track { background: rgb(var(--leon-bg)); }
+.theme-leon ::-webkit-scrollbar-thumb {
+  background: rgb(var(--leon-dark));
+  border: 1px solid rgb(var(--leon-green) / 0.4);
+}
+
+/* ---------- Corps des articles ---------- */
+.leon-prose {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.84rem;
+  line-height: 1.8;
+  color: rgb(var(--leon-ink) / 0.86);
+  overflow-wrap: anywhere;
+}
+.leon-prose :is(pre, .katex, .katex-display) { overflow-wrap: normal; }
+.leon-prose > * + * { margin-top: 0.9rem; }
+.leon-prose :is(h2, h3, h4) {
+  font-family: Silkscreen, 'Press Start 2P', monospace;
+  color: rgb(var(--leon-gold));
+  line-height: 1.5;
+  margin-top: 1.7rem;
+}
+.leon-prose h2 { font-size: 0.95rem; }
+.leon-prose h3 { font-size: 0.85rem; }
+.leon-prose h4 { font-size: 0.8rem; }
+.leon-prose strong { color: rgb(var(--leon-green)); }
+.leon-prose a {
+  color: rgb(var(--leon-gold));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.leon-prose ul { list-style: square; padding-left: 1.2rem; }
+.leon-prose ol { list-style: decimal; padding-left: 1.2rem; }
+.leon-prose blockquote {
+  border-left: 3px solid rgb(var(--leon-green));
+  padding-left: 0.9rem;
+  color: rgb(var(--leon-ink) / 0.7);
+}
+.leon-prose :not(pre) > code {
+  font-size: 0.88em;
+  padding: 0.1em 0.3em;
+  background: rgb(var(--leon-dark) / 0.6);
+  border: 1px solid rgb(var(--leon-green) / 0.3);
+  color: rgb(var(--leon-green));
+}
+.leon-prose pre {
+  padding: 0.8rem;
+  background: rgb(var(--leon-bg));
+  border: 1px solid rgb(var(--leon-green) / 0.35);
+  font-size: 0.72rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.leon-prose .math-block {
+  padding: 0.7rem 0.9rem;
+  background: rgb(var(--leon-dark) / 0.45);
+  border-left: 3px solid rgb(var(--leon-gold));
+  overflow-x: auto;
+}
+.theme-leon .katex { font-size: 1em; text-transform: none; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 639px) {
+  .leon-nav-link { padding: 0.45rem 0.6rem; }
+  .leon-btn { min-height: 2.4rem; }
+  html[data-theme='leontechlab'] body { background-attachment: scroll; }
+}
+
+/* ---------- Mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='leontechlab'] { scroll-behavior: auto; }
+  .theme-leon *,
+  .theme-leon *::before,
+  .theme-leon *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
