@@ -1,363 +1,381 @@
 <script setup>
-import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { createGame, SCORE } from '../game/engine.js'
+import { LEVELS } from '../game/levels.js'
+import { draw, VIEW_H, VIEW_W } from '../game/render.js'
+import { readPref, writePref } from '../../../core/prefs.js'
 
 /**
- * « Arcade 221 » — mini-jeu 8-bit du labo de Dakar.
- * Un pixel-ingénieur court sur un circuit imprimé et active, en sautant, des puces
- * qui résument les travaux du blog. Clic sur une puce = bonus ; ESPACE / flèches quand le jeu a le focus.
+ * « Arcade 221 » — le mini-jeu du labo de Dakar.
+ *
+ * Un vrai jeu de plateforme, jouable jusqu'au bout : quatre salles, trois vies,
+ * un terminal à atteindre dans chacune. Univers propre au blog (ingénieur,
+ * puces de données, surtensions), pas le décalque d'un jeu existant.
+ *
+ * La logique est dans game/engine.js, sans DOM : elle est jouée automatiquement
+ * par un test pour vérifier que la partie reste finissable.
  */
 const props = defineProps({ open: { type: Boolean, default: true } })
 const emit = defineEmits(['update:open'])
 const mono = inject('mono')
+
 const canvas = ref(null)
+const stage = ref(null)
+const game = createGame()
+const view = reactive({ ...game.state })
+const best = ref(Number(readPref('mono:arcade-best', '0')) || 0)
+const paused = ref(false)
+const focused = ref(false)
 
-const W = 920
-const H = 145
-const GROUND = 124
-const PIXEL_FONT = '8px "Press Start 2P", monospace'
-
-const hero = { x: 110, y: GROUND - 26, vx: 2.2, vy: 0, w: 22, h: 26, onGround: true, dir: 1, frame: 0 }
-const chips = [
-  { x: 190, y: 42, w: 96, h: 26, label: 'ASR PULAAR', reward: 'WHISPER +1', bump: 0, flash: 0 },
-  { x: 355, y: 42, w: 96, h: 26, label: 'GMAO -25%', reward: 'WEIBULL OK!', bump: 0, flash: 0 },
-  { x: 520, y: 42, w: 96, h: 26, label: 'FAULTY CAT', reward: 'GLITCH UNLOCK!', bump: 0, flash: 0 },
-  { x: 685, y: 42, w: 96, h: 26, label: 'VEO 3D', reward: 'BOUKI & LEUK!', bump: 0, flash: 0 },
-]
-const clouds = [
-  { x: 60, y: 18, s: 0.35 },
-  { x: 310, y: 12, s: 0.25 },
-  { x: 620, y: 20, s: 0.4 },
-  { x: 830, y: 14, s: 0.3 },
-]
-const stars = Array.from({ length: 26 }, (_, i) => ({ x: (i * 137) % W, y: 6 + ((i * 53) % 44) }))
-
-// Silhouette de ville (déterministe), volontairement basse et discrète :
-// elle doit rester un décor, pas concurrencer les puces dorées.
-const skyline = []
-for (let x = 70, i = 0; x < W - 80; i++) {
-  const w = 26 + ((i * 17) % 22)
-  const h = 12 + ((i * 29) % 20)
-  const windows = []
-  for (let wy = GROUND - h + 5; wy < GROUND - 5; wy += 8) {
-    for (let wx = x + 5; wx < x + w - 5; wx += 8) if ((wx * 7 + wy * 3 + i) % 9 === 0) windows.push({ x: wx, y: wy })
-  }
-  skyline.push({ x, w, h, windows })
-  x += w + 10 + ((i * 11) % 16)
-}
-
-const popups = []
-const timers = new Set()
+const STEP_MS = 1000 / 60
+const input = { left: false, right: false, jump: false }
 let raf = 0
-let tick = 0
+let last = 0
+let acc = 0
+let frames = 0
 
-function later(fn, ms) {
-  const id = window.setTimeout(() => {
-    timers.delete(id)
-    fn()
-  }, ms)
-  timers.add(id)
+/* ---------- Synchronisation de l'état lisible par le gabarit ---------- */
+function sync() {
+  view.phase = game.state.phase
+  view.levelIndex = game.state.levelIndex
+  view.levelName = game.state.levelName
+  view.hint = game.state.hint
+  view.lives = game.state.lives
+  view.score = game.state.score
+  view.chipsLeft = game.state.chipsLeft
+  view.chipsTotal = game.state.chipsTotal
+  view.message = game.state.message
+  view.frames = game.state.frames
 }
 
-function jump() {
-  if (!hero.onGround) return
-  hero.vy = -8.6
-  hero.onGround = false
-  mono.sfx.jump()
-}
+const running = computed(() => view.phase === 'playing' || view.phase === 'dying')
+const overlay = computed(() => (running.value ? (paused.value ? 'paused' : null) : view.phase))
+const chipsTaken = computed(() => view.chipsTotal - view.chipsLeft)
+const seconds = computed(() => Math.floor(view.frames / 60))
 
-function activate(chip) {
-  chip.bump = -10
-  chip.flash = 1
-  popups.push({ x: chip.x + chip.w / 2, y: chip.y - 6, vy: -5.5, life: 1, text: chip.reward })
-}
-
-function combo() {
-  mono.sfx.fanfare()
-  chips.forEach((chip, i) =>
-    later(() => {
-      activate(chip)
+/* ---------- Sons et retours dans la page ---------- */
+function handleEvents() {
+  for (const e of game.drainEvents()) {
+    if (e.type === 'jump') mono.sfx.jump()
+    else if (e.type === 'chip') {
+      mono.sfx.blip()
+      mono.addScore(SCORE.chip, 1)
+    } else if (e.type === 'stomp') mono.sfx.blip()
+    else if (e.type === 'die') mono.sfx.whoosh()
+    else if (e.type === 'cleared') {
+      mono.sfx.fanfare()
       const rect = canvas.value?.getBoundingClientRect()
-      if (rect) mono.coinBurst(rect.left + ((chip.x + chip.w / 2) / W) * rect.width, rect.top + 30, 2, chip.reward)
-    }, i * 160),
-  )
-}
-
-function onClick(event) {
-  const rect = canvas.value.getBoundingClientRect()
-  const x = ((event.clientX - rect.left) * W) / rect.width
-  const y = ((event.clientY - rect.top) * H) / rect.height
-  const chip = chips.find((c) => x >= c.x && x <= c.x + c.w && y >= c.y - 10 && y <= c.y + c.h + 15)
-  if (chip) {
-    activate(chip)
-    hero.x = chip.x + chip.w / 2 - hero.w / 2
-    hero.vy = -4
-    hero.onGround = false
-    mono.coinBurst(event.clientX, event.clientY, 2, chip.reward)
-  } else {
-    hero.dir = x > hero.x ? 1 : -1
-    jump()
+      if (rect) mono.coinBurst(rect.left + rect.width / 2, rect.top + 40, 4, e.perfect ? 'SALLE PARFAITE' : 'SALLE RÉTABLIE')
+    } else if (e.type === 'won') mono.sfx.fanfare()
   }
 }
 
-function onKey(event) {
-  if (event.code === 'Space' || event.key === ' ') {
-    event.preventDefault()
-    jump()
-  } else if (event.key === 'ArrowRight') {
-    event.preventDefault()
-    hero.dir = 1
-    hero.x = Math.min(W - 95, hero.x + 14)
-  } else if (event.key === 'ArrowLeft') {
-    event.preventDefault()
-    hero.dir = -1
-    hero.x = Math.max(65, hero.x - 14)
-  }
-}
-
-function update() {
-  tick += 1
-  hero.x += hero.vx * hero.dir
-  if (hero.x > W - 95) hero.dir = -1
-  if (hero.x < 65) hero.dir = 1
-
-  // Saut spontané sous une puce, pour que la scène vive toute seule
-  for (const chip of chips) {
-    const center = chip.x + chip.w / 2
-    if (hero.onGround && Math.abs(hero.x + hero.w / 2 - center) < 4 && Math.random() < 0.08) {
-      hero.vy = -8.4
-      hero.onGround = false
-    }
-  }
-
-  if (!hero.onGround) {
-    hero.y += hero.vy
-    hero.vy += 0.48
-    for (const chip of chips) {
-      const hit = hero.vy < 0 && hero.x + hero.w > chip.x && hero.x < chip.x + chip.w && hero.y <= chip.y + chip.h && hero.y >= chip.y - 8
-      if (hit) {
-        hero.vy = 2.2
-        activate(chip)
-        mono.addScore(250, 1)
-      }
-    }
-    if (hero.y >= GROUND - hero.h) {
-      hero.y = GROUND - hero.h
-      hero.vy = 0
-      hero.onGround = true
-    }
-  }
-  hero.frame += 0.18
-}
-
-function drawRack(ctx, x, label, phase) {
-  const top = GROUND - 44
-  ctx.fillStyle = '#4a382a'
-  ctx.fillRect(x, top, 38, 44)
-  ctx.fillStyle = '#2a1f16'
-  ctx.fillRect(x + 3, top + 3, 32, 38)
-  for (let r = 0; r < 4; r++) {
-    ctx.fillStyle = '#6b513a'
-    ctx.fillRect(x + 5, top + 6 + r * 9, 28, 5)
-    const on = (Math.floor(tick / 12) + r + phase) % 3 !== 0
-    ctx.fillStyle = on ? '#fbbf24' : '#b45309'
-    ctx.fillRect(x + 28, top + 7 + r * 9, 3, 3)
-  }
-  ctx.font = PIXEL_FONT
-  ctx.fillStyle = '#fcd34d'
-  ctx.fillText(label, x + 3, top - 5)
-}
-
-function draw(ctx) {
-  // Crépuscule sur Dakar : indigo profond en haut, braise à l'horizon
-  const sky = ctx.createLinearGradient(0, 0, 0, GROUND)
-  sky.addColorStop(0, '#171029')
-  sky.addColorStop(0.6, '#3a1c35')
-  sky.addColorStop(0.9, '#7c3517')
-  sky.addColorStop(1, '#b45309')
-  ctx.fillStyle = sky
-  ctx.fillRect(0, 0, W, H)
-
-  ctx.fillStyle = 'rgba(255, 237, 213, 0.5)'
-  for (const s of stars) ctx.fillRect(s.x, s.y, 1.5, 1.5)
-
-  ctx.fillStyle = 'rgba(255,255,255,0.14)'
-  for (const c of clouds) {
-    c.x -= c.s
-    if (c.x < -70) c.x = W + 40
-    ctx.fillRect(c.x, c.y, 48, 12)
-    ctx.fillRect(c.x + 10, c.y - 6, 28, 6)
-  }
-
-  // Ville en contre-jour sur le couchant, fenêtres allumées
-  for (const b of skyline) {
-    ctx.fillStyle = 'rgba(32, 16, 28, 0.82)'
-    ctx.fillRect(b.x, GROUND - b.h, b.w, b.h)
-    ctx.fillStyle = 'rgba(253, 224, 71, 0.4)'
-    for (const w of b.windows) ctx.fillRect(w.x, w.y, 2, 2)
-  }
-
-  // Baies de serveurs aux deux extrémités
-  drawRack(ctx, 18, 'DKR', 0)
-  drawRack(ctx, W - 56, 'GPU', 1)
-
-  // Puces de données : or chaud, halo permanent, flash blanc quand on les active
-  for (const chip of chips) {
-    chip.bump = chip.bump < 0 ? chip.bump + 1.2 : 0
-    chip.flash = Math.max(0, chip.flash - 0.04)
-    const y = chip.y + chip.bump
-
-    ctx.save()
-    ctx.shadowColor = 'rgba(251, 191, 36, 0.85)'
-    ctx.shadowBlur = 10 + chip.flash * 18
-
-    // Pattes du boîtier
-    ctx.fillStyle = '#92400e'
-    for (let px = chip.x + 6; px < chip.x + chip.w - 4; px += 9) {
-      ctx.fillRect(px, y - 3, 3, 3)
-      ctx.fillRect(px, y + chip.h, 3, 3)
-    }
-    // Contour puis face
-    ctx.fillStyle = '#7c2d12'
-    ctx.fillRect(chip.x, y, chip.w, chip.h)
-    ctx.fillStyle = chip.flash > 0 ? `rgba(254, 243, 199, ${0.6 + chip.flash * 0.4})` : '#f59e0b'
-    ctx.fillRect(chip.x + 2, y + 2, chip.w - 4, chip.h - 4)
-    ctx.restore()
-
-    // Biseau clair en haut, ombre en bas : la puce paraît en relief
-    ctx.fillStyle = 'rgba(255, 237, 213, 0.55)'
-    ctx.fillRect(chip.x + 2, y + 2, chip.w - 4, 2)
-    ctx.fillStyle = 'rgba(120, 53, 15, 0.45)'
-    ctx.fillRect(chip.x + 2, y + chip.h - 4, chip.w - 4, 2)
-
-    // Repère de broche 1
-    ctx.fillStyle = '#7c2d12'
-    ctx.fillRect(chip.x + 5, y + 6, 3, 3)
-
-    ctx.font = PIXEL_FONT
-    ctx.fillStyle = '#451a03'
-    ctx.fillText(chip.label, chip.x + 11, y + 17)
-  }
-
-  // Jetons qui s'envolent
-  for (let i = popups.length - 1; i >= 0; i--) {
-    const p = popups[i]
-    p.y += p.vy
-    p.vy += 0.28
-    p.life -= 0.025
-    if (p.life <= 0) {
-      popups.splice(i, 1)
-      continue
-    }
-    ctx.fillStyle = '#FBBF24'
-    ctx.fillRect(p.x - 5, p.y - 12, 10, 14)
-    ctx.fillStyle = '#FDE68A'
-    ctx.fillRect(p.x - 2, p.y - 9, 4, 8)
-    ctx.font = PIXEL_FONT
-    ctx.fillStyle = '#fff7ed'
-    ctx.fillText(p.text, p.x - 36, p.y - 18)
-  }
-
-  // Pixel-ingénieur (casque terracotta, visière cyan)
-  const hx = Math.round(hero.x)
-  const hy = Math.round(hero.y)
-  ctx.fillStyle = '#D95D39'
-  ctx.fillRect(hx + 2, hy, 18, 6)
-  ctx.fillStyle = '#38BDF8'
-  ctx.fillRect(hx + (hero.dir > 0 ? 10 : 2), hy + 6, 10, 5)
-  ctx.fillStyle = '#F8FAFC'
-  ctx.fillRect(hx + 3, hy + 11, 16, 9)
-  ctx.fillStyle = '#D95D39'
-  ctx.fillRect(hx + 6, hy + 12, 10, 7)
-  const leg = hero.onGround ? Math.sin(hero.frame) * 3 : 3
-  ctx.fillStyle = '#F59E0B'
-  ctx.fillRect(hx + 3 + leg, hy + 20, 6, 6)
-  ctx.fillRect(hx + 13 - leg, hy + 20, 6, 6)
-
-  // Sol : circuit imprimé cuivré
-  ctx.fillStyle = '#3b1d0c'
-  ctx.fillRect(0, GROUND, W, H - GROUND)
-  ctx.fillStyle = '#fbbf24'
-  ctx.fillRect(0, GROUND, W, 2)
-  ctx.fillStyle = 'rgba(251, 191, 36, 0.25)'
-  ctx.fillRect(0, GROUND + 2, W, 1)
-  ctx.fillStyle = '#b45309'
-  for (let gx = 0; gx < W; gx += 24) {
-    ctx.fillRect(gx + 2, GROUND + 7, 18, 2)
-    ctx.fillRect(gx + 12, GROUND + 13, 2, 7)
-  }
-  ctx.fillStyle = '#fde68a'
-  for (let gx = 10; gx < W; gx += 48) ctx.fillRect(gx, GROUND + 6, 4, 4)
-}
-
-function loop() {
-  raf = 0
+/* ---------- Boucle ---------- */
+function render() {
   const el = canvas.value
-  if (!el || !props.open || document.hidden) return
-  update()
-  draw(el.getContext('2d'))
-  raf = requestAnimationFrame(loop)
+  if (!el) return
+  const ctx = el.getContext('2d')
+  if (!ctx) return
+  draw(ctx, game.state, game.cameraFor(VIEW_W), frames)
 }
-function start() {
-  if (!raf) raf = requestAnimationFrame(loop)
+
+function frame(now) {
+  raf = requestAnimationFrame(frame)
+  if (!last) last = now
+  let dt = now - last
+  last = now
+  if (dt > 250) dt = STEP_MS // onglet revenu au premier plan : on ne rattrape pas
+
+  if (running.value && !paused.value) {
+    acc += dt
+    let steps = 0
+    while (acc >= STEP_MS && steps < 5) {
+      game.step(input)
+      handleEvents()
+      acc -= STEP_MS
+      steps += 1
+      frames += 1
+    }
+  } else {
+    acc = 0
+    frames += 1
+    handleEvents()
+  }
+  sync()
+  render()
+}
+
+function startLoop() {
+  if (raf || !props.open) return
+  last = 0
+  raf = requestAnimationFrame(frame)
+}
+function stopLoop() {
+  cancelAnimationFrame(raf)
+  raf = 0
+}
+
+/* ---------- Actions ---------- */
+function rememberBest() {
+  if (game.state.score > best.value) {
+    best.value = game.state.score
+    writePref('mono:arcade-best', String(best.value))
+  }
+}
+
+/** Le bouton principal de l'écran affiché */
+function primary() {
+  const phase = game.state.phase
+  if (paused.value) {
+    paused.value = false
+    return
+  }
+  if (phase === 'cleared') game.nextLevel()
+  else if (phase === 'title' || phase === 'over' || phase === 'won') {
+    rememberBest()
+    game.start()
+  }
+  sync()
+  canvas.value?.focus()
+}
+
+const primaryLabel = computed(() => {
+  if (paused.value) return 'Reprendre'
+  return { title: 'Démarrer', cleared: 'Salle suivante', over: 'Rejouer', won: 'Rejouer' }[view.phase] ?? 'Reprendre'
+})
+
+function restart() {
+  rememberBest()
+  game.start()
+  sync()
+  canvas.value?.focus()
+}
+
+/* ---------- Clavier ---------- */
+const KEYS = {
+  ArrowLeft: 'left',
+  ArrowRight: 'right',
+  KeyA: 'left',
+  KeyQ: 'left', // clavier AZERTY
+  KeyD: 'right',
+  ArrowUp: 'jump',
+  KeyW: 'jump',
+  KeyZ: 'jump',
+  Space: 'jump',
+}
+
+function onKeyDown(event) {
+  if (event.code === 'KeyP' || event.code === 'Escape') {
+    if (running.value) {
+      paused.value = !paused.value
+      event.preventDefault()
+    }
+    return
+  }
+  if (event.code === 'KeyR') {
+    restart()
+    event.preventDefault()
+    return
+  }
+  if (event.code === 'Enter' || (event.code === 'Space' && overlay.value)) {
+    primary()
+    event.preventDefault()
+    return
+  }
+  const action = KEYS[event.code]
+  if (!action) return
+  input[action] = true
+  event.preventDefault() // sinon Espace et les flèches font défiler la page
+}
+
+function onKeyUp(event) {
+  const action = KEYS[event.code]
+  if (!action) return
+  input[action] = false
+  event.preventDefault()
+}
+
+/* ---------- Commandes tactiles ---------- */
+function hold(action, on) {
+  input[action] = on
+}
+function releaseAll() {
+  input.left = false
+  input.right = false
+  input.jump = false
+}
+
+/* ---------- Cycle de vie ---------- */
+function onBlur() {
+  releaseAll()
+  focused.value = false
+  if (running.value) paused.value = true
+}
+function onFocus() {
+  focused.value = true
 }
 function onVisibility() {
-  if (!document.hidden) start()
+  if (document.hidden) {
+    releaseAll()
+    if (running.value) paused.value = true
+  }
 }
 
 watch(
   () => props.open,
   (open) => {
-    if (open) start()
+    if (open) startLoop()
+    else {
+      releaseAll()
+      if (running.value) paused.value = true
+      stopLoop()
+    }
   },
 )
+
+watch(
+  () => view.phase,
+  (phase) => {
+    if (phase === 'over' || phase === 'won') {
+      rememberBest()
+      mono.showToast(phase === 'won' ? 'Réseau du labo rétabli — bravo !' : 'Partie terminée')
+    }
+  },
+)
+
 onMounted(() => {
-  start()
+  sync()
+  startLoop()
   document.addEventListener('visibilitychange', onVisibility)
+
+  // Crochet de test : permet à un robot de lire la position du joueur pour
+  // décider quand sauter, tout en envoyant de vraies touches. `import.meta.env.DEV`
+  // est remplacé par false au build : la ligne disparaît du site publié.
+  if (import.meta.env.DEV && canvas.value) canvas.value.__arcade = game
 })
+
 onBeforeUnmount(() => {
-  cancelAnimationFrame(raf)
-  raf = 0
-  timers.forEach((id) => window.clearTimeout(id))
+  stopLoop()
+  rememberBest()
   document.removeEventListener('visibilitychange', onVisibility)
 })
 
-defineExpose({ jump, combo })
+defineExpose({ start: restart })
 </script>
 
 <template>
   <details class="mono-arcade" :open="open" @toggle="emit('update:open', $event.target.open)">
-    <summary>Une pause au laboratoire : découvrir le mini-jeu 8-bit</summary>
-    <div class="relative border-t-2 border-amber-500/60 bg-[#2a1708] dark:border-amber-400/50">
-      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/30 bg-zinc-900/95 px-3 py-1.5 font-pixel text-[10px] text-amber-400">
-        <div class="flex items-center gap-2">
-          <span class="inline-block h-2 w-2 animate-ping rounded-full bg-emerald-400" />
-          <span>ARCADE 221 // DAKAR LAB STAGE</span>
-        </div>
-        <div class="flex items-center gap-2 font-mono text-[11px] text-zinc-300">
-          <span class="hidden sm:inline">
-            Activez les puces <strong class="text-amber-400">DATA</strong> (clic sur le jeu,
-            <kbd class="rounded border border-zinc-700 bg-zinc-800 px-1 py-0.5 text-[10px]">ESPACE</kbd> ou flèches)
-          </span>
-          <button type="button" class="rounded bg-amber-500 px-2 py-0.5 font-pixel text-[9px] text-zinc-950 transition hover:bg-amber-400 active:scale-95" @click="jump">
-            SAUTER
-          </button>
-          <button type="button" class="rounded bg-emerald-500 px-2 py-0.5 font-pixel text-[9px] text-zinc-950 transition hover:bg-emerald-400 active:scale-95" @click="combo">
-            COMBO x4
-          </button>
-        </div>
+    <summary>Une pause au laboratoire : jouer à Arcade 221</summary>
+
+    <div ref="stage" class="relative border-t-2 border-amber-500/60 bg-[#2a1708] dark:border-amber-400/50">
+      <!-- Tableau de bord -->
+      <div
+        class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-amber-500/30 bg-zinc-900/95 px-3 py-1.5 font-pixel text-[10px] text-amber-400"
+        role="status"
+        aria-live="polite"
+      >
+        <span>SALLE {{ String(view.levelIndex + 1).padStart(2, '0') }}/{{ LEVELS.length }}</span>
+        <span>VIES <span class="text-zinc-100">{{ '●'.repeat(Math.max(0, view.lives)) || '—' }}</span></span>
+        <span>PUCES <span class="text-zinc-100">{{ chipsTaken }}/{{ view.chipsTotal }}</span></span>
+        <span>SCORE <span class="text-zinc-100">{{ String(view.score).padStart(5, '0') }}</span></span>
+        <span class="hidden sm:inline">RECORD <span class="text-zinc-100">{{ String(best).padStart(5, '0') }}</span></span>
       </div>
-      <div class="mono-arcade-scroll">
+
+      <!-- Aire de jeu -->
+      <div class="relative">
         <canvas
           ref="canvas"
-          :width="W"
-          :height="H"
+          :width="VIEW_W"
+          :height="VIEW_H"
+          class="mono-arcade-canvas block w-full"
           tabindex="0"
-          class="block h-32 w-full cursor-pointer sm:h-36"
-          aria-label="Mini-jeu : sélectionnez-le puis utilisez les flèches et la barre espace"
-          title="Cliquez pour faire courir et sauter le pixel-ingénieur sous les puces !"
-          @click="onClick"
-          @keydown="onKey"
+          role="application"
+          :aria-label="`Arcade 221, jeu de plateforme. Salle ${view.levelIndex + 1} sur ${LEVELS.length}. Flèches gauche et droite pour courir, Espace pour sauter, P pour mettre en pause, R pour recommencer.`"
+          @keydown="onKeyDown"
+          @keyup="onKeyUp"
+          @blur="onBlur"
+          @focus="onFocus"
+          @pointerdown="canvas?.focus()"
         />
+
+        <!-- Écrans -->
+        <div
+          v-if="overlay"
+          class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-950/82 px-4 text-center"
+        >
+          <p class="font-pixel text-[11px] leading-relaxed text-amber-400 sm:text-[13px]">
+            <template v-if="overlay === 'title'">ARCADE 221 — LABO DE DAKAR</template>
+            <template v-else-if="overlay === 'paused'">PAUSE</template>
+            <template v-else-if="overlay === 'cleared'">{{ view.message }}</template>
+            <template v-else-if="overlay === 'won'">RÉSEAU RÉTABLI</template>
+            <template v-else>RÉSEAU HORS TENSION</template>
+          </p>
+
+          <p v-if="overlay === 'title'" class="max-w-md font-mono text-[11px] leading-relaxed text-zinc-300">
+            Remettez le réseau sous tension : traversez les {{ LEVELS.length }} salles jusqu'au terminal.
+            Les puces de données rapportent des points, les surtensions coûtent une vie.
+          </p>
+          <p v-else-if="overlay === 'won'" class="font-mono text-[11px] text-zinc-300">
+            {{ LEVELS.length }} salles en {{ seconds }} s · score {{ view.score }} · record {{ best }}
+          </p>
+          <p v-else-if="overlay === 'over'" class="font-mono text-[11px] text-zinc-300">
+            Score {{ view.score }} · record {{ best }}
+          </p>
+          <p v-else-if="overlay === 'paused'" class="font-mono text-[11px] text-zinc-300">
+            P ou Échap pour reprendre
+          </p>
+
+          <button type="button" class="mono-arcade-btn" @click="primary">{{ primaryLabel }}</button>
+
+          <p v-if="overlay === 'title'" class="font-mono text-[10px] text-zinc-500">
+            ← → ou A/D pour courir · Espace pour sauter · P pause · R recommencer
+          </p>
+        </div>
+
+        <!-- Conseil de la salle, en jeu -->
+        <p
+          v-else-if="view.phase === 'playing' && view.frames < 240"
+          class="pointer-events-none absolute inset-x-0 top-2 text-center font-mono text-[10px] text-amber-200/80"
+        >
+          {{ view.hint }}
+        </p>
+      </div>
+
+      <!-- Commandes tactiles : seulement sur écran tactile (cf. theme.css) -->
+      <div class="mono-arcade-pad">
+        <button
+          type="button"
+          class="mono-arcade-key"
+          aria-label="Aller à gauche"
+          @pointerdown.prevent="hold('left', true)"
+          @pointerup.prevent="hold('left', false)"
+          @pointerleave="hold('left', false)"
+          @pointercancel="hold('left', false)"
+        >
+          ◀
+        </button>
+        <button
+          type="button"
+          class="mono-arcade-key"
+          aria-label="Aller à droite"
+          @pointerdown.prevent="hold('right', true)"
+          @pointerup.prevent="hold('right', false)"
+          @pointerleave="hold('right', false)"
+          @pointercancel="hold('right', false)"
+        >
+          ▶
+        </button>
+        <button
+          type="button"
+          class="mono-arcade-key mono-arcade-key-jump"
+          aria-label="Sauter"
+          @pointerdown.prevent="hold('jump', true)"
+          @pointerup.prevent="hold('jump', false)"
+          @pointerleave="hold('jump', false)"
+          @pointercancel="hold('jump', false)"
+        >
+          SAUT
+        </button>
       </div>
     </div>
   </details>

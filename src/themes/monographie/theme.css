@@ -127,6 +127,70 @@ html.mono-turbo {
   image-rendering: crisp-edges;
 }
 
+/* ---------- Aire de jeu ----------
+   Le canevas fait 480 × 272 pixels logiques, agrandis en CSS : les pixels
+   restent francs et le dessin coûte peu, même sur un téléphone. */
+.mono-arcade-canvas {
+  aspect-ratio: 480 / 272;
+  background: #171029;
+  touch-action: manipulation; /* pas de zoom au double-tap pendant la partie */
+  cursor: pointer;
+}
+.mono-arcade-canvas:focus-visible {
+  outline: 2px solid rgb(var(--mono-accent));
+  outline-offset: -2px;
+}
+
+.mono-arcade-btn {
+  font: 0.68rem 'Press Start 2P', monospace;
+  line-height: 1.6;
+  padding: 0.7rem 1.1rem;
+  color: #27150a;
+  background: linear-gradient(to bottom, #fbbf24, #d97706);
+  border: 2px solid #7c2d12;
+  box-shadow: 0 3px 0 #7c2d12;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.mono-arcade-btn:hover {
+  filter: brightness(1.07);
+}
+.mono-arcade-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #7c2d12;
+}
+
+/* ---------- Commandes tactiles ----------
+   Inutiles au clavier : affichées seulement si le pointeur est grossier. */
+.mono-arcade-pad {
+  display: none;
+}
+@media (pointer: coarse) {
+  .mono-arcade-pad {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.6fr;
+    gap: 0.5rem;
+    padding: 0.6rem;
+    border-top: 1px solid rgb(245 158 11 / 0.3);
+    background: rgb(24 24 27 / 0.95);
+  }
+}
+.mono-arcade-key {
+  min-height: 3.25rem;
+  font: 0.6rem 'Press Start 2P', monospace;
+  color: #fde68a;
+  background: #3f2a16;
+  border: 2px solid #92400e;
+  touch-action: none; /* le doigt maintenu ne doit pas faire défiler la page */
+  user-select: none;
+}
+.mono-arcade-key:active {
+  background: #d97706;
+  color: #27150a;
+}
+.mono-arcade-key-jump {
+  background: #7c2d12;
+}
+
 /* ---------- Cartes « puces de données » (chiffres clés) ---------- */
 .mono-chip-card {
   border: 1px solid rgb(var(--mono-line));
@@ -270,8 +334,6 @@ html.mono-turbo {
   .mono-subtitle { font-size: 1rem; line-height: 1.7; }
   .mono-link-pill { min-height: 2.75rem; }
   .mono-arcade summary { min-height: 3rem; line-height: 1.5; }
-  .mono-arcade-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
-  .mono-arcade-scroll canvas { width: 600px; max-width: none; height: auto; }
   .mono-chip-card { padding: 0.75rem; }
   .mono-nav {
     display: grid;

@@ -14,7 +14,7 @@ Cinq formes existent aujourd'hui :
 
 | № | Forme               | Apparence                                                                     |
 |---|---------------------|-------------------------------------------------------------------------------|
-| 1 | `monographie`       | Carnet de recherche éditorial (papier / obsidienne), labo, mini-jeu 8-bit     |
+| 1 | `monographie`       | Carnet de recherche éditorial (papier / obsidienne), labo, jeu « Arcade 221 » |
 | 2 | `cyberdeck`         | Poste de pilotage spatial : noyau WebGL Three.js, labo cyber, arène           |
 | 3 | `planche`           | Planche de bureau d'études : papier millimétré, cartouche, tirage ou cyanotype |
 | 4 | `mission`           | Contrôle de mission : radar orbital, télémétrie, essaim MCP, terminal Ctrl+K  |
@@ -72,6 +72,31 @@ Les **simulateurs du laboratoire** suivent la même règle : leurs formules, seu
 d'essai vivent dans `src/core/lab-math.js`, et chaque forme n'écrit que sa présentation
 (courbe, chronogramme, tableau…). Une correction de physique ou de linguistique se fait
 donc à un seul endroit et profite à toutes les formes.
+
+### « Arcade 221 », le jeu de la forme Monographie
+
+Un vrai jeu de plateforme, terminable : quatre salles, trois vies, un terminal à
+atteindre dans chacune. Clavier (flèches ou A/D, Espace, P, R) et commandes
+tactiles sur téléphone. Il vit dans `src/themes/monographie/game/` :
+
+```
+levels.js   les salles, posées par coordonnée, + validateLevels()
+engine.js   la logique : physique, collisions, vies, score — sans aucun DOM
+render.js   le dessin sur canevas, 480 × 272 pixels logiques agrandis
+```
+
+Le moteur ne touche ni au DOM ni au canevas, et il est **déterministe** : à
+entrées égales, la partie se déroule toujours pareil. C'est ce qui permet de la
+faire jouer par un robot et de vérifier qu'elle reste finissable après chaque
+modification de salle.
+
+`validateLevels()` refuse les salles injouables. Un saut porte à ~67 px, soit un
+peu plus de 4 tuiles : deux dangers accolés devraient être franchis d'un seul
+bond, ce qui est impossible. La fonction vérifie donc la largeur des fosses,
+l'écart entre dangers (rayon de patrouille des gardes compris) et l'absence de
+bloc plein au-dessus d'un danger — un plafond coupe le saut et condamne la
+salle. En développement, un problème s'affiche dans la console ; en production
+la page du visiteur n'est jamais cassée pour autant.
 
 ### Deux formes qui partagent leur ossature
 
