@@ -159,7 +159,10 @@ async function progress(mb, render, tone = 'out') {
     await wait(90)
   }
 }
-const bar = (k, w = 30, on = '█', off = '░') => on.repeat(Math.round(k * w)) + off.repeat(w - Math.round(k * w))
+/* Largeur des barres selon l'écran : ~44 colonnes sur un téléphone, une ligne doit suffire */
+const narrow = () => window.innerWidth < 640
+const BAR = () => (narrow() ? 12 : 30)
+const bar = (k, w = BAR(), on = '█', off = '░') => on.repeat(Math.round(k * w)) + off.repeat(w - Math.round(k * w))
 
 async function longTask(fn) {
   if (busy.value) return
@@ -184,7 +187,11 @@ async function installGeneric(name) {
     if (job.cancelled) return
     print(t('cmd.ins.found', { x: a.key, v: a.v, by: a.by }))
     print(t('cmd.ins.downloading', { f: a.file }))
-    const ok = await progress(a.mb, (k, done, speed) => `  [${bar(k)}] ${String(Math.round(k * 100)).padStart(3)} %   ${fmtMb(done)} / ${fmtMb(a.mb)} MB   ${speed.toFixed(1)} MB/s`)
+    const ok = await progress(a.mb, (k, done, speed) =>
+      narrow()
+        ? `  [${bar(k)}] ${String(Math.round(k * 100)).padStart(3)} %  ${fmtMb(done)}/${fmtMb(a.mb)} MB`
+        : `  [${bar(k)}] ${String(Math.round(k * 100)).padStart(3)} %   ${fmtMb(done)} / ${fmtMb(a.mb)} MB   ${speed.toFixed(1)} MB/s`,
+    )
     if (!ok) return
     const v = print(t('cmd.ins.verifying'), 'dim')
     await wait(450)
@@ -212,7 +219,7 @@ async function installWinget(name) {
     print('This application is licensed to you by its owner.', 'dim')
     print('Microsoft is not responsible for, nor does it grant any licenses to, third-party packages.', 'dim')
     print(`Downloading https://download.${a.key}.org/${a.v}/${a.file}`)
-    const ok = await progress(a.mb, (k, done) => `  ${bar(k, 30, '█', ' ')}  ${fmtMb(done)} MB / ${fmtMb(a.mb)} MB`)
+    const ok = await progress(a.mb, (k, done) => `  ${bar(k, BAR(), '█', ' ')}  ${fmtMb(done)} MB / ${fmtMb(a.mb)} MB`)
     if (!ok) return
     print('Successfully verified installer hash', 'ok')
     print('Starting package install...')
@@ -269,7 +276,7 @@ async function installBrew(name) {
     if (job.cancelled) return
     print(`==> Fetching ${a.key}`, 'ok')
     print(`==> Downloading https://ghcr.io/v2/homebrew/core/${a.key}/blobs/sha256:${hash(a.key.length, 9).toString(16).slice(2, 14)}…`, 'ok')
-    const ok = await progress(a.mb, (k) => `${'#'.repeat(Math.round(k * 72))} ${(k * 100).toFixed(1)}%`)
+    const ok = await progress(a.mb, (k) => `${'#'.repeat(Math.round(k * (narrow() ? 30 : 72)))} ${(k * 100).toFixed(1)}%`)
     if (!ok) return
     print(`==> Pouring ${a.key}--${a.v}.arm64_sonoma.bottle.tar.gz`, 'ok')
     await wait(600)
@@ -299,7 +306,7 @@ async function pipInstall(names) {
       if (job.cancelled) return
       print(`Downloading ${wheel} (${fmtMb(mb)} MB)`)
       const ok = await progress(mb, (k, got, speed) => {
-        const w = 40
+        const w = narrow() ? 16 : 40
         const f = Math.round(k * w)
         const eta = Math.max(0, Math.round(((1 - k) * mb) / speed))
         return `   ${'━'.repeat(f)}${f < w ? '╸' : ''}${'─'.repeat(Math.max(0, w - f - 1))} ${fmtMb(got)}/${fmtMb(mb)} MB ${speed.toFixed(1)} MB/s eta 0:00:${String(eta).padStart(2, '0')}`
