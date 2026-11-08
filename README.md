@@ -266,8 +266,9 @@ langue de l'appareil (voir plus bas). Les autres formes restent en français.
 
 ### La forme Évolution (1991 → 2050)
 
-Un bandeau en pixel art (salle de contrôle, Terre et satellite), une frise de sept
-époques, et la **même page du blog** affichée dans le navigateur de l'époque choisie :
+Un bandeau en pixel art sépia (un ingénieur à lunettes devant les consoles d'une salle de
+contrôle, un globe filaire tourné vers l'Afrique, un satellite et le sol lunaire), une frise
+de sept époques, et la **même page du blog** affichée dans le navigateur de l'époque choisie :
 
 | Époque      | Nom                 | Navigateur et page                                          |
 |-------------|---------------------|-------------------------------------------------------------|

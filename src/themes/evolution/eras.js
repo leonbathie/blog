@@ -392,7 +392,7 @@ export function eraIn(era, lang) {
 export const FRAME = {
   fr: {
     title: 'Évolution de LeonTechLab',
-    banner: 'Bandeau LeonTechLab : salle de contrôle, Terre et satellite',
+    banner: 'Bandeau LeonTechLab : un ingénieur devant les consoles d’une salle de contrôle, la Terre filaire et un satellite',
     eras: 'Époques',
     others: 'Les autres époques',
     show: 'Afficher la page de {years} : {name}',
@@ -409,7 +409,7 @@ export const FRAME = {
   },
   en: {
     title: 'The evolution of LeonTechLab',
-    banner: 'LeonTechLab banner: control room, Earth and satellite',
+    banner: 'LeonTechLab banner: an engineer at the consoles of a control room, a wireframe Earth and a satellite',
     eras: 'Eras',
     others: 'The other eras',
     show: 'Show the {years} page: {name}',
