@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue'
-import { articles, categories, profile } from '../../../content/index.js'
 import RichText from '../../../components/RichText.vue'
 import PixelIcon from './PixelIcon.vue'
 import { moisCourt } from '../format.js'
+import { t, useLeon } from '../i18n.js'
 
 /**
  * Colonne centrale : la liste des articles (accueil, ou page « Articles »
@@ -18,17 +18,22 @@ const props = defineProps({
   reading: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:filter', 'update:query', 'copy-bibtex', 'open-lab', 'close'])
+const { lang, content } = useLeon()
+
+const articles = computed(() => content.value.articles)
+const categories = computed(() => content.value.categories)
+const profile = computed(() => content.value.profile)
 
 /** Vignette : champ `icon` de l'article, sinon une icône par domaine */
 const ICONS = { 'speech-ai': 'computer', security: 'satellite', industrial: 'gear' }
 const iconOf = (a) => a.icon ?? ICONS[a.category] ?? 'computer'
 
-const label = (id) => categories.find((c) => c.id === id)?.label ?? id
-const count = (id) => articles.filter((a) => a.category === id).length
+const label = (id) => categories.value.find((c) => c.id === id)?.label ?? id
+const count = (id) => articles.value.filter((a) => a.category === id).length
 
 const shown = computed(() => {
-  if (props.mode !== 'list') return articles
-  let list = props.filter === 'all' ? articles : articles.filter((a) => a.category === props.filter)
+  if (props.mode !== 'list') return articles.value
+  let list = props.filter === 'all' ? articles.value : articles.value.filter((a) => a.category === props.filter)
   const q = props.query.trim().toLowerCase()
   if (q) list = list.filter((a) => `${a.title} ${a.abstract} ${a.tag} ${label(a.category)}`.toLowerCase().includes(q))
   return list
@@ -40,9 +45,9 @@ function resetList() {
 }
 
 /* Article précédent / suivant, dans l'ordre chronologique */
-const index = computed(() => articles.findIndex((a) => a.slug === props.selected?.slug))
-const older = computed(() => (index.value >= 0 ? articles[index.value + 1] : null) ?? null)
-const newer = computed(() => (index.value > 0 ? articles[index.value - 1] : null) ?? null)
+const index = computed(() => articles.value.findIndex((a) => a.slug === props.selected?.slug))
+const older = computed(() => (index.value >= 0 ? articles.value[index.value + 1] : null) ?? null)
+const newer = computed(() => (index.value > 0 ? articles.value[index.value - 1] : null) ?? null)
 </script>
 
 <template>
@@ -51,17 +56,17 @@ const newer = computed(() => (index.value > 0 ? articles[index.value - 1] : null
     <h2 class="leon-panel-head">{{ selected.tag || label(selected.category) }}</h2>
     <div class="leon-panel-body">
       <div class="flex flex-wrap items-center justify-between gap-2 text-[1rem] text-leon-dim">
-        <span>Réf. {{ selected.id }}</span>
-        <button type="button" class="leon-btn" @click="emit('close')">Retour à la liste</button>
+        <span>{{ t('articles.ref', { id: selected.id }) }}</span>
+        <button type="button" class="leon-btn" @click="emit('close')">{{ t('articles.back') }}</button>
       </div>
 
       <h1 class="leon-article-title mt-2 text-[1.55rem] sm:text-[1.9rem]">{{ selected.title }}</h1>
       <p class="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[1.05rem] sm:gap-x-2">
-        <span class="text-leon-gold">Par {{ profile.name }}</span>
+        <span class="text-leon-gold">{{ t('articles.by', { name: profile.name }) }}</span>
         <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
-        <span class="text-leon-green">{{ moisCourt(selected.date) }}</span>
+        <span class="text-leon-green">{{ moisCourt(selected.date, lang) }}</span>
         <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
-        <span class="text-leon-ink/80">{{ selected.readTime }} min de lecture</span>
+        <span class="text-leon-ink/80">{{ t('articles.minutes', { n: selected.readTime }) }}</span>
         <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
         <span class="text-leon-gold">{{ label(selected.category) }}</span>
       </p>
@@ -76,21 +81,24 @@ const newer = computed(() => (index.value > 0 ? articles[index.value - 1] : null
         <RichText :text="selected.metrics" />
       </p>
 
-      <div class="leon-prose mt-5" v-html="selected.html" />
+      <p v-if="selected.bodyLang !== lang" class="mt-4 border border-dashed border-leon-gold/60 px-3 py-1 text-[1.05rem] text-leon-gold">
+        {{ t('articles.frOnly') }}
+      </p>
+      <div class="leon-prose mt-5" :lang="selected.bodyLang" v-html="selected.html" />
 
       <div class="leon-rule mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 pt-3">
-        <button v-if="selected.bibtex" type="button" class="leon-btn" @click="emit('copy-bibtex')">Copier BibTeX</button>
+        <button v-if="selected.bibtex" type="button" class="leon-btn" @click="emit('copy-bibtex')">{{ t('articles.copyBibtex') }}</button>
         <button v-if="selected.lab" type="button" class="leon-btn leon-btn-amber" @click="emit('open-lab', selected.lab)">
-          Ouvrir le simulateur
+          {{ t('articles.openLab') }}
         </button>
       </div>
-      <nav class="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2" aria-label="Autres articles">
+      <nav class="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2" :aria-label="t('articles.others')">
         <RouterLink
           v-if="older"
           :to="{ name: 'article', params: { slug: older.slug } }"
           class="block border border-leon-green/40 px-2 py-1 hover:bg-leon-green/10"
         >
-          <span class="block text-[1rem] text-leon-dim">&lt;&lt; Plus ancien</span>
+          <span class="block text-[1rem] text-leon-dim">{{ t('articles.older') }}</span>
           <span class="block truncate text-[1.1rem] text-leon-cyan">{{ older.title }}</span>
         </RouterLink>
         <span v-else class="hidden sm:block" />
@@ -99,7 +107,7 @@ const newer = computed(() => (index.value > 0 ? articles[index.value - 1] : null
           :to="{ name: 'article', params: { slug: newer.slug } }"
           class="block border border-leon-green/40 px-2 py-1 hover:bg-leon-green/10 sm:text-right"
         >
-          <span class="block text-[1rem] text-leon-dim">Plus récent &gt;&gt;</span>
+          <span class="block text-[1rem] text-leon-dim">{{ t('articles.newer') }}</span>
           <span class="block truncate text-[1.1rem] text-leon-cyan">{{ newer.title }}</span>
         </RouterLink>
       </nav>
@@ -109,23 +117,23 @@ const newer = computed(() => (index.value > 0 ? articles[index.value - 1] : null
   <!-- Liste -->
   <section v-else class="leon-panel">
     <template v-if="mode === 'list'">
-      <h2 class="leon-panel-head">Articles — {{ shown.length }} / {{ articles.length }}</h2>
+      <h2 class="leon-panel-head">{{ t('articles.title', { n: shown.length, total: articles.length }) }}</h2>
       <form class="flex items-center gap-2 px-2.5 pt-1.5 text-[1.08rem]" role="search" @submit.prevent>
-        <label for="leon-list-q" class="shrink-0 text-leon-green">&gt;&gt; Rechercher&nbsp;:</label>
+        <label for="leon-list-q" class="shrink-0 text-leon-green">&gt;&gt; {{ t('articles.search') }}</label>
         <input
           id="leon-list-q"
           type="search"
           class="leon-field"
-          placeholder="titre, sujet, mot-clé…"
+          :placeholder="t('articles.placeholder')"
           autocomplete="off"
           :value="query"
           @input="emit('update:query', $event.target.value)"
         />
       </form>
       <div class="flex flex-wrap items-center gap-x-1 gap-y-0.5 px-2 pb-1.5 pt-1 text-[1.05rem]">
-        <span class="text-leon-dim">Filtre&nbsp;:</span>
+        <span class="text-leon-dim">{{ t('articles.filter') }}</span>
         <button type="button" class="leon-btn" :class="filter === 'all' ? 'leon-btn-on' : ''" @click="emit('update:filter', 'all')">
-          Tous ({{ articles.length }})
+          {{ t('articles.all', { n: articles.length }) }}
         </button>
         <button
           v-for="c in categories"
@@ -156,23 +164,23 @@ const newer = computed(() => (index.value > 0 ? articles[index.value - 1] : null
             <RouterLink :to="{ name: 'article', params: { slug: a.slug } }" class="leon-article-title">{{ a.title }}</RouterLink>
           </h3>
           <p class="mt-1 flex flex-wrap gap-x-3 text-[1.02rem] leading-tight sm:gap-x-2 sm:text-[1.08rem]">
-            <span class="text-leon-gold">Par {{ profile.name }}</span>
+            <span class="text-leon-gold">{{ t('articles.by', { name: profile.name }) }}</span>
             <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
-            <span class="text-leon-green">{{ moisCourt(a.date) }}</span>
+            <span class="text-leon-green">{{ moisCourt(a.date, lang) }}</span>
             <span class="hidden text-leon-dim sm:inline" aria-hidden="true">|</span>
             <span class="text-leon-gold">{{ label(a.category) }}</span>
           </p>
           <p class="mt-1.5 line-clamp-3 text-[1.1rem] leading-tight text-leon-ink/85 sm:line-clamp-2">{{ a.abstract }}</p>
           <RouterLink :to="{ name: 'article', params: { slug: a.slug } }" class="leon-btn -ml-1 mt-1">
-            Lire la suite...<span class="sr-only"> : {{ a.title }}</span>
+            {{ t('articles.readMore') }}<span class="sr-only"> : {{ a.title }}</span>
           </RouterLink>
         </div>
       </li>
     </ul>
 
     <p v-if="!shown.length" class="leon-panel-body text-[1.1rem] text-leon-dim">
-      Aucun article ne correspond.
-      <button type="button" class="leon-btn" @click="resetList">Tout afficher</button>
+      {{ t('articles.none') }}
+      <button type="button" class="leon-btn" @click="resetList">{{ t('articles.showAll') }}</button>
     </p>
   </section>
 </template>

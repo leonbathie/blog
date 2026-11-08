@@ -1,23 +1,25 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { articles, categories, profile } from '../../content/index.js'
 import { useThemes } from '../../core/themes.js'
 import { copyText } from '../../core/clipboard.js'
 import { createHero, LAYOUTS } from './hero.js'
 import { dateHorloge, heureHorloge, moisCourt } from './format.js'
+import { t, themeLabel, useLeon } from './i18n.js'
 import ArticlesView from './components/ArticlesView.vue'
 import ProjectsView from './components/ProjectsView.vue'
 import LabView from './components/LabView.vue'
 import AboutView from './components/AboutView.vue'
 import ProfileAvatar from './components/ProfileAvatar.vue'
+import CmdPrompt from './components/CmdPrompt.vue'
 import './theme.css'
 
 /*
  * Forme 6 — « LeonTechLab »
  * Console rétro : écran à phosphore vert encadré, barre d'état et horloge,
  * bandeau lunaire en pixel art, navigation « [ crochets ] », trois colonnes
- * de panneaux « :: Titre :: », titres d'articles cyan.
+ * de panneaux « :: Titre :: », titres d'articles cyan, invite de commande.
+ * En français ou en anglais, selon la langue de l'appareil (bouton FR | EN).
  *
  * L'écusson du bandeau est un dessin original : on ne reprend pas l'emblème
  * d'une agence spatiale réelle, qui laisserait croire à une affiliation.
@@ -26,7 +28,11 @@ import './theme.css'
 const route = useRoute()
 const router = useRouter()
 const { themes, active, archive, setTheme, number } = useThemes()
+const { lang, setLang, content } = useLeon()
 const root = document.documentElement
+
+const profile = computed(() => content.value.profile)
+const list = computed(() => content.value.articles)
 
 /* ---------- Notifications ---------- */
 const toast = reactive({ msg: '', show: false })
@@ -37,31 +43,52 @@ function showToast(msg) {
   window.clearTimeout(toastTimer)
   toastTimer = window.setTimeout(() => (toast.show = false), 2600)
 }
-provide('leon', { toast: showToast })
 
 /* ---------- Bandeau ---------- */
 // Même seuil que le préfixe `sm:` de Tailwind, qui place le titre par-dessus.
 const compactQuery = window.matchMedia('(max-width: 639px)')
-// Taille initiale seulement : c'est hero.js qui redimensionne ensuite le canevas.
-// Lier ces attributs à une valeur réactive effacerait l'image à chaque bascule.
+// Proportions avant le premier rendu ; hero.js fixe ensuite la taille exacte.
 const heroInit = compactQuery.matches ? LAYOUTS.compact : LAYOUTS.wide
 const heroCanvas = ref(null)
 let hero = null
 let heroSeen = null // l'animation s'arrête quand le bandeau sort de l'écran
 const onCompactChange = (e) => hero?.setCompact(e.matches)
 function fireLander() {
-  if (hero?.fire()) showToast("Décollage de l'étage de remontée !")
+  const ok = Boolean(hero?.fire())
+  if (ok) showToast(t('hero.launched'))
+  return ok
 }
+/** Depuis l'invite de commande : on remonte voir le bandeau, puis on décolle */
+function launchFromCmd() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  return fireLander()
+}
+provide('leon', { toast: showToast, launch: launchFromCmd })
 
 /* ---------- Horloge ---------- */
-const clockDate = ref('')
-const clockTime = ref('')
+const now = ref(new Date())
 let clockTimer = 0
-function tickClock() {
-  const d = new Date()
-  clockDate.value = dateHorloge(d)
-  clockTime.value = heureHorloge(d)
+const clockDate = computed(() => dateHorloge(now.value, lang.value))
+const clockTime = computed(() => heureHorloge(now.value))
+
+/* ---------- Langue ---------- */
+const LANGS = [
+  { id: 'fr', label: 'FR', name: 'français' },
+  { id: 'en', label: 'EN', name: 'English' },
+]
+function chooseLang(id) {
+  if (id === lang.value) return
+  setLang(id)
+  showToast(t('toast.lang'))
 }
+watch(
+  lang,
+  (value) => {
+    root.lang = value
+    document.title = `LeonTechLab — ${profile.value.name} (@${profile.value.handle}) | ${t('status.lab')}`
+  },
+  { immediate: true },
+)
 
 /* ---------- Sections ---------- */
 const view = computed(
@@ -76,13 +103,13 @@ const LAB_IDS = ['glitch', 'pulaar', 'weibull']
 const labModule = computed(() => (LAB_IDS.includes(route.params.module) ? route.params.module : 'glitch'))
 
 const NAV = computed(() => [
-  { key: 'home', label: 'Accueil', to: { name: 'home' }, hotkey: '1' },
-  { key: 'articles', label: 'Articles', to: { name: 'articles' }, hotkey: '2' },
-  { key: 'projects', label: 'Projets', to: { name: 'projects' }, hotkey: '3' },
-  { key: 'lab', label: 'Recherche', to: { name: 'lab', params: { module: labModule.value } }, hotkey: '4' },
-  { key: 'github', label: 'GitHub', href: profile.links.github },
-  { key: 'about', label: 'À propos', to: { name: 'about' }, hotkey: '5' },
-  { key: 'contact', label: 'Contact', to: { name: 'about', hash: '#contact' }, hotkey: '6' },
+  { key: 'home', to: { name: 'home' }, hotkey: '1' },
+  { key: 'articles', to: { name: 'articles' }, hotkey: '2' },
+  { key: 'projects', to: { name: 'projects' }, hotkey: '3' },
+  { key: 'research', to: { name: 'lab', params: { module: labModule.value } }, hotkey: '4' },
+  { key: 'github', href: profile.value.links.github },
+  { key: 'about', to: { name: 'about' }, hotkey: '5' },
+  { key: 'contact', to: { name: 'about', hash: '#contact' }, hotkey: '6' },
 ])
 function navActive(key) {
   switch (key) {
@@ -91,8 +118,9 @@ function navActive(key) {
     case 'articles':
       return route.name === 'articles' || reading.value
     case 'projects':
-    case 'lab':
-      return view.value === key
+      return view.value === 'projects'
+    case 'research':
+      return view.value === 'lab'
     case 'about':
       return view.value === 'about' && !contact.value
     case 'contact':
@@ -106,7 +134,7 @@ function navActive(key) {
 const filter = ref('all')
 const query = ref('')
 const selected = computed(
-  () => (reading.value ? articles.find((a) => a.slug === route.params.slug) : null) ?? articles[0] ?? null,
+  () => (reading.value ? list.value.find((a) => a.slug === route.params.slug) : null) ?? list.value[0] ?? null,
 )
 function selectArticle(slug) {
   router.push({ name: 'article', params: { slug } })
@@ -116,7 +144,7 @@ function openLab(module) {
 }
 async function copyBibtex() {
   if (!selected.value) return
-  showToast((await copyText(selected.value.bibtex)) ? 'Citation BibTeX copiée' : 'La copie a échoué')
+  showToast((await copyText(selected.value.bibtex)) ? t('toast.bibtexOk') : t('toast.bibtexFail'))
 }
 function openArchives(cat = 'all') {
   filter.value = cat
@@ -126,15 +154,15 @@ function openArchives(cat = 'all') {
 
 /* ---------- Menu principal (colonne de gauche) ---------- */
 const MENU = computed(() => [
-  { key: 'home', label: 'Accueil', to: { name: 'home' } },
-  { key: 'articles', label: 'Articles', cat: 'all' },
-  { key: 'projects', label: 'Projets', to: { name: 'projects' } },
-  { key: 'lab', label: 'Recherche & Cyber-Lab', to: { name: 'lab', params: { module: labModule.value } } },
-  { key: 'cat:security', label: 'Cybersécurité & Hardware', cat: 'security' },
-  { key: 'cat:industrial', label: 'GMAO & Industrie', cat: 'industrial' },
-  { key: 'cat:speech-ai', label: 'IA en Afrique', cat: 'speech-ai' },
-  { key: 'about', label: 'À propos', to: { name: 'about' } },
-  { key: 'contact', label: 'Contact', to: { name: 'about', hash: '#contact' } },
+  { key: 'home', label: t('nav.home'), to: { name: 'home' } },
+  { key: 'articles', label: t('nav.articles'), cat: 'all' },
+  { key: 'projects', label: t('nav.projects'), to: { name: 'projects' } },
+  { key: 'research', label: t('menu.lab'), to: { name: 'lab', params: { module: labModule.value } } },
+  { key: 'cat:security', label: t('menu.security'), cat: 'security' },
+  { key: 'cat:industrial', label: t('menu.industrial'), cat: 'industrial' },
+  { key: 'cat:speech-ai', label: t('menu.speech'), cat: 'speech-ai' },
+  { key: 'about', label: t('nav.about'), to: { name: 'about' } },
+  { key: 'contact', label: t('nav.contact'), to: { name: 'about', hash: '#contact' } },
 ])
 function menuActive(item) {
   if (item.cat) return route.name === 'articles' && filter.value === item.cat
@@ -143,7 +171,10 @@ function menuActive(item) {
 function pickMenu(item) {
   if (!item.cat) return router.push(item.to)
   openArchives(item.cat)
-  if (item.cat !== 'all') showToast(`Domaine : ${categories.find((c) => c.id === item.cat)?.label ?? item.cat}`)
+  if (item.cat !== 'all') {
+    const label = content.value.categories.find((c) => c.id === item.cat)?.label ?? item.cat
+    showToast(t('toast.domain', { x: label }))
+  }
 }
 
 /* ---------- Outils ---------- */
@@ -158,64 +189,63 @@ function submitSearch() {
   router.push({ name: 'articles' })
 }
 function randomArticle() {
-  const pool = reading.value ? articles.filter((a) => a.slug !== selected.value?.slug) : articles
+  const pool = reading.value ? list.value.filter((a) => a.slug !== selected.value?.slug) : list.value
   const pick = pool[Math.floor(Math.random() * pool.length)]
   if (!pick) return
   selectArticle(pick.slug)
-  showToast('Article tiré au sort')
+  showToast(t('toast.random'))
+}
+
+/* ---------- Invite de commande ---------- */
+const cmdOpen = ref(false)
+const cmdButton = ref(null)
+function toggleCmd(open = !cmdOpen.value) {
+  cmdOpen.value = open
+  if (!open) nextTick(() => cmdButton.value?.focus({ preventScroll: true }))
 }
 
 /* ---------- Colonne de droite ---------- */
-const CITATIONS = [
-  { text: 'La technologie au service d’un monde meilleur.', by: 'LeonTechLab' },
-  { text: 'Build Knowledge. Build a Better Future.', by: 'LeonTechLab' },
-  { text: 'Dream it. Build it. Share it.', by: 'LeonTechLab' },
-  { text: 'Construire un pont entre la science, l’innovation et notre patrimoine.', by: profile.name },
-]
-const citation = CITATIONS[Math.floor(Date.now() / 86_400_000) % CITATIONS.length]
+const citation = computed(() => {
+  const items = t('quote.items')
+  return items[Math.floor(Date.now() / 86_400_000) % items.length]
+})
 
-const LIENS = [
-  { label: 'GitHub', url: profile.links.github },
-  { label: 'LinkedIn', url: profile.links.linkedin },
+const LIENS = computed(() => [
+  { label: 'GitHub', url: profile.value.links.github },
+  { label: 'LinkedIn', url: profile.value.links.linkedin },
   { label: 'Hugging Face', url: 'https://huggingface.co' },
   { label: 'arXiv', url: 'https://arxiv.org' },
   { label: 'Anthropic', url: 'https://www.anthropic.com' },
   { label: 'DeepMind', url: 'https://deepmind.google' },
   { label: 'OpenAI', url: 'https://openai.com' },
   { label: 'Scholar', url: 'https://scholar.google.com' },
-]
+])
 
 /* Lettre d'information : sans serveur, la demande part de la messagerie du visiteur */
 const email = ref('')
 function subscribe() {
-  const subject = encodeURIComponent('Abonnement aux articles LeonTechLab')
-  const body = encodeURIComponent(
-    `Bonjour ${profile.name},\n\nJe souhaite être prévenu(e) des nouveaux articles de LeonTechLab.\nMon adresse : ${email.value.trim()}\n`,
-  )
-  window.location.href = `mailto:${profile.links.email}?subject=${subject}&body=${body}`
-  showToast('Ouverture de votre messagerie…')
+  const subject = encodeURIComponent(t('newsletter.subject'))
+  const body = encodeURIComponent(t('newsletter.body', { name: profile.value.name, email: email.value.trim() }))
+  window.location.href = `mailto:${profile.value.links.email}?subject=${subject}&body=${body}`
+  showToast(t('toast.mail'))
 }
 
-const oldest = articles[articles.length - 1]
-const stats = [
-  { label: 'Articles', value: articles.length },
-  { label: 'Dépôts', value: profile.githubRepoCount },
-  { label: 'Formes', value: themes.length },
-  { label: 'Depuis', value: oldest ? moisCourt(oldest.date) : '—' },
-]
+const stats = computed(() => {
+  const oldest = list.value[list.value.length - 1]
+  return [
+    { label: t('counter.articles'), value: list.value.length },
+    { label: t('counter.repos'), value: profile.value.githubRepoCount },
+    { label: t('counter.forms'), value: themes.length },
+    { label: t('counter.since'), value: oldest ? moisCourt(oldest.date, lang.value) : '—' },
+  ]
+})
 
-const others = computed(() => themes.filter((t) => t.id !== active.value.id))
+const others = computed(() => themes.filter((th) => th.id !== active.value.id))
 
 /* ---------- Aide et raccourcis clavier ---------- */
 const help = ref(false)
 const helpClose = ref(null)
 let helpReturn = null
-const SHORTCUTS = [
-  ['1 … 6', 'Accueil, Articles, Projets, Recherche, À propos, Contact'],
-  ['/', 'Rechercher un article'],
-  ['Échap', 'Fermer, revenir à la liste puis à l’accueil'],
-  ['F1', 'Cette aide'],
-]
 watch(help, async (open) => {
   if (open) {
     helpReturn = document.activeElement
@@ -233,10 +263,16 @@ function onKey(e) {
     help.value = !help.value
     return
   }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    toggleCmd()
+    return
+  }
   const el = e.target
   const typing = el instanceof HTMLElement && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)
   if (e.key === 'Escape') {
     if (help.value) help.value = false
+    else if (cmdOpen.value) toggleCmd(false)
     else if (typing) el.blur()
     else if (reading.value) router.push({ name: 'articles' })
     else if (route.name !== 'home') router.push({ name: 'home' })
@@ -263,6 +299,7 @@ function revealActiveTab() {
   // Défilement horizontal de la barre seule : scrollIntoView bougerait aussi la page.
   nav.scrollBy({ left: tab.left - box.left - (box.width - tab.width) / 2, behavior: 'smooth' })
 }
+
 /*
  * Sur téléphone, le bandeau occupe près de la moitié de l'écran. Sur une page
  * intérieure, on défile donc jusqu'à la barre d'onglets : le contenu apparaît
@@ -281,13 +318,12 @@ watch(
     revealActiveTab()
   },
 )
+watch(lang, () => nextTick(revealActiveTab))
 
 /* ---------- Cycle de vie ---------- */
 onMounted(() => {
-  document.title = `LeonTechLab — ${profile.name} (@${profile.handle}) | AI Research Lab`
   root.classList.add('dark')
-  tickClock()
-  clockTimer = window.setInterval(tickClock, 1000)
+  clockTimer = window.setInterval(() => (now.value = new Date()), 1000)
   compactQuery.addEventListener('change', onCompactChange)
   window.addEventListener('keydown', onKey)
   if (heroCanvas.value) {
@@ -313,6 +349,7 @@ onBeforeUnmount(() => {
   heroSeen?.disconnect()
   hero?.dispose()
   root.classList.remove('dark')
+  root.lang = 'fr' // les autres formes sont en français
 })
 </script>
 
@@ -328,6 +365,9 @@ onBeforeUnmount(() => {
       [SYS] {{ toast.msg }}
     </div>
 
+    <!-- Invite de commande -->
+    <CmdPrompt :open="cmdOpen" @close="toggleCmd(false)" />
+
     <!-- Aide (F1) -->
     <div
       v-if="help"
@@ -338,17 +378,17 @@ onBeforeUnmount(() => {
       @click.self="help = false"
     >
       <div class="leon-panel w-full max-w-md">
-        <h2 id="leon-help-title" class="leon-panel-head">Aide — raccourcis clavier</h2>
+        <h2 id="leon-help-title" class="leon-panel-head">{{ t('help.title') }}</h2>
         <div class="leon-panel-body text-[1.1rem]">
           <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1">
-            <template v-for="[key, what] in SHORTCUTS" :key="key">
+            <template v-for="[key, what] in t('help.keys')" :key="key">
               <dt class="text-leon-gold">[ {{ key }} ]</dt>
               <dd class="text-leon-ink/85">{{ what }}</dd>
             </template>
           </dl>
-          <p class="mt-3 text-leon-dim">Un clic sur le bandeau fait décoller le module lunaire.</p>
+          <p class="mt-3 text-leon-dim">{{ t('help.tip') }}</p>
           <div class="mt-3 text-right">
-            <button ref="helpClose" type="button" class="leon-btn" @click="help = false">Fermer</button>
+            <button ref="helpClose" type="button" class="leon-btn" @click="help = false">{{ t('help.close') }}</button>
           </div>
         </div>
       </div>
@@ -358,20 +398,35 @@ onBeforeUnmount(() => {
       <!-- 1. Barre d'état -->
       <header class="leon-status">
         <span class="min-w-0 overflow-hidden text-ellipsis">
-          [LeonTechLab v1.0<span class="hidden sm:inline"> &nbsp;—&nbsp; {{ profile.name }} / AI Research Lab</span>
+          [LeonTechLab v1.1<span class="hidden sm:inline"> &nbsp;—&nbsp; {{ profile.name }} / {{ t('status.lab') }}</span>
         </span>
-        <span class="shrink-0 text-leon-gold">
-          [ <span class="hidden sm:inline">{{ clockDate }} &nbsp;</span>{{ clockTime }} ]
+        <span class="flex shrink-0 items-center gap-2">
+          <span class="leon-lang" role="group" :aria-label="t('status.lang')">
+            <button
+              v-for="l in LANGS"
+              :key="l.id"
+              type="button"
+              class="leon-lang-btn"
+              :class="l.id === lang ? 'leon-lang-on' : ''"
+              :aria-pressed="l.id === lang"
+              :lang="l.id"
+              :title="t('status.switchTo', { name: l.name })"
+              @click="chooseLang(l.id)"
+            >
+              {{ l.label }}
+            </button>
+          </span>
+          <span class="text-leon-gold">[ <span class="hidden sm:inline">{{ clockDate }} &nbsp;</span>{{ clockTime }} ]</span>
         </span>
       </header>
 
       <!-- 2. Bandeau lunaire -->
-      <section ref="heroBox" class="leon-hero" aria-label="Bandeau LeonTechLab">
+      <section ref="heroBox" class="leon-hero" :aria-label="t('hero.label')">
         <button
           type="button"
           class="block w-full cursor-pointer"
-          title="Cliquez pour faire décoller le module lunaire"
-          aria-label="Faire décoller le module lunaire"
+          :title="t('hero.launchTitle')"
+          :aria-label="t('hero.launch')"
           @click="fireLander"
         >
           <canvas ref="heroCanvas" :width="heroInit.w" :height="heroInit.h" class="leon-hero-canvas" aria-hidden="true" />
@@ -385,22 +440,22 @@ onBeforeUnmount(() => {
             LeonTechLab
           </component>
           <p class="leon-subtitle mt-2 text-[1.08rem] leading-none sm:mt-3 sm:text-[clamp(1rem,1.6vw,1.45rem)]">
-            Research • Innovation • Knowledge
+            {{ t('hero.subtitle') }}
           </p>
           <p class="mt-2 hidden italic leading-tight text-leon-bright-gold sm:block sm:text-[clamp(0.95rem,1.3vw,1.25rem)]">
-            "Exploring the frontiers of Artificial Intelligence..."
+            {{ t('hero.quote') }}
           </p>
           <p class="mt-2 text-[1rem] leading-none text-leon-green sm:text-[clamp(0.95rem,1.15vw,1.1rem)]">
-            par {{ profile.name }} <span class="text-leon-dim">·</span> @{{ profile.handle }}
+            {{ t('hero.by') }} {{ profile.name }} <span class="text-leon-dim">·</span> @{{ profile.handle }}
           </p>
         </div>
       </section>
 
       <!-- 3. Barre de navigation -->
-      <nav ref="navBar" class="leon-nav" aria-label="Navigation principale">
+      <nav ref="navBar" class="leon-nav" :aria-label="t('nav.label')">
         <template v-for="item in NAV" :key="item.key">
           <a v-if="item.href" :href="item.href" target="_blank" rel="noopener noreferrer" class="leon-nav-link">
-            {{ item.label }}<span class="sr-only"> (nouvel onglet)</span>
+            {{ t(`nav.${item.key}`) }}<span class="sr-only"> {{ t('nav.newTab') }}</span>
           </a>
           <RouterLink
             v-else
@@ -409,7 +464,7 @@ onBeforeUnmount(() => {
             :class="navActive(item.key) ? 'leon-nav-link-on' : ''"
             :aria-current="navActive(item.key) ? 'page' : undefined"
           >
-            {{ item.label }}
+            {{ t(`nav.${item.key}`) }}
           </RouterLink>
         </template>
       </nav>
@@ -419,7 +474,7 @@ onBeforeUnmount(() => {
         <!-- Colonne de gauche -->
         <aside class="order-3 space-y-2 lg:order-none">
           <section class="leon-panel hidden lg:block">
-            <h2 class="leon-panel-head">Menu Principal</h2>
+            <h2 class="leon-panel-head">{{ t('menu.title') }}</h2>
             <ul class="py-1">
               <li v-for="item in MENU" :key="item.key">
                 <button
@@ -436,10 +491,10 @@ onBeforeUnmount(() => {
           </section>
 
           <section class="leon-panel">
-            <h2 class="leon-panel-head">Outils</h2>
+            <h2 class="leon-panel-head">{{ t('tools.title') }}</h2>
             <div class="py-1">
               <form class="leon-menu-item leon-menu-form" role="search" @submit.prevent="submitSearch">
-                <label for="leon-search" class="shrink-0">Recherche&nbsp;:</label>
+                <label for="leon-search" class="shrink-0">{{ t('tools.search') }}&nbsp;:</label>
                 <input
                   id="leon-search"
                   ref="searchInput"
@@ -449,16 +504,18 @@ onBeforeUnmount(() => {
                   placeholder="_"
                   class="leon-field"
                   autocomplete="off"
+                  :aria-label="t('tools.searchLabel')"
                 />
               </form>
-              <button type="button" class="leon-menu-item" @click="openArchives()">Archives</button>
-              <button type="button" class="leon-menu-item" @click="randomArticle">Article au hasard</button>
-              <button type="button" class="leon-menu-item" @click="help = true">Aide (F1)</button>
+              <button type="button" class="leon-menu-item" @click="openArchives()">{{ t('tools.archives') }}</button>
+              <button type="button" class="leon-menu-item" @click="randomArticle">{{ t('tools.random') }}</button>
+              <button type="button" class="leon-menu-item" @click="toggleCmd(true)">{{ t('tools.cmd') }} (Ctrl+K)</button>
+              <button type="button" class="leon-menu-item" @click="help = true">{{ t('tools.help') }}</button>
             </div>
           </section>
 
           <section class="leon-panel">
-            <h2 class="leon-panel-head">Compteur</h2>
+            <h2 class="leon-panel-head">{{ t('counter.title') }}</h2>
             <ul class="leon-panel-body text-[1.08rem] leading-tight">
               <li v-for="s in stats" :key="s.label" class="flex justify-between gap-2">
                 <span class="text-leon-ink/85">{{ s.label }}</span>
@@ -489,7 +546,7 @@ onBeforeUnmount(() => {
         <!-- Colonne de droite -->
         <aside class="order-2 space-y-2 lg:order-none">
           <section class="leon-panel">
-            <h2 class="leon-panel-head">Profil</h2>
+            <h2 class="leon-panel-head">{{ t('profile.title') }}</h2>
             <div class="leon-panel-body flex gap-3">
               <ProfileAvatar :size="64" />
               <div class="min-w-0 text-[1.06rem] leading-tight">
@@ -504,40 +561,40 @@ onBeforeUnmount(() => {
             <div class="flex flex-wrap gap-x-1 px-2 pb-2">
               <a :href="profile.links.github" target="_blank" rel="noopener noreferrer" class="leon-btn">GitHub</a>
               <a :href="profile.links.linkedin" target="_blank" rel="noopener noreferrer" class="leon-btn">LinkedIn</a>
-              <RouterLink :to="{ name: 'about' }" class="leon-btn">Parcours</RouterLink>
+              <RouterLink :to="{ name: 'about' }" class="leon-btn">{{ t('profile.career') }}</RouterLink>
             </div>
           </section>
 
           <section class="leon-panel">
-            <h2 class="leon-panel-head">Citation</h2>
+            <h2 class="leon-panel-head">{{ t('quote.title') }}</h2>
             <blockquote class="leon-panel-body text-[1.08rem] leading-tight">
-              <p class="italic text-leon-ink/90">« {{ citation.text }} »</p>
-              <footer class="mt-1 text-right text-leon-gold">— {{ citation.by }}</footer>
+              <p class="italic text-leon-ink/90">{{ t('quote.open') }}{{ citation[0] }}{{ t('quote.close') }}</p>
+              <footer class="mt-1 text-right text-leon-gold">— {{ citation[1] }}</footer>
             </blockquote>
           </section>
 
           <section class="leon-panel">
-            <h2 class="leon-panel-head">Newsletter</h2>
+            <h2 class="leon-panel-head">{{ t('newsletter.title') }}</h2>
             <form class="leon-panel-body text-[1.06rem]" @submit.prevent="subscribe">
-              <p class="leading-tight text-leon-ink/85">Recevez les nouveaux articles par courriel&nbsp;:</p>
-              <label for="leon-email" class="sr-only">Votre adresse de courriel</label>
+              <p class="leading-tight text-leon-ink/85">{{ t('newsletter.text') }}</p>
+              <label for="leon-email" class="sr-only">{{ t('newsletter.label') }}</label>
               <input
                 id="leon-email"
                 v-model="email"
                 type="email"
                 class="leon-field mt-2"
-                placeholder="[ Votre email... ]"
+                :placeholder="t('newsletter.placeholder')"
                 autocomplete="email"
                 required
               />
               <div class="mt-2 text-center">
-                <button type="submit" class="leon-btn leon-btn-gold">S'abonner</button>
+                <button type="submit" class="leon-btn leon-btn-gold">{{ t('newsletter.button') }}</button>
               </div>
             </form>
           </section>
 
           <section class="leon-panel">
-            <h2 class="leon-panel-head">Liens</h2>
+            <h2 class="leon-panel-head">{{ t('links.title') }}</h2>
             <ul class="leon-panel-body grid grid-cols-2 gap-x-3 gap-y-0.5 text-[1.06rem]">
               <li v-for="(l, i) in LIENS" :key="l.label" class="min-w-0" :class="i % 2 === 0 ? 'border-r border-leon-green/40 pr-2' : ''">
                 <a :href="l.url" target="_blank" rel="noopener noreferrer" class="block truncate text-leon-green hover:text-leon-bright">
@@ -548,13 +605,13 @@ onBeforeUnmount(() => {
           </section>
 
           <section v-if="archive" class="leon-panel">
-            <h2 class="leon-panel-head">Formes du blog</h2>
+            <h2 class="leon-panel-head">{{ t('forms.title') }}</h2>
             <div class="leon-panel-body text-[1.06rem]">
-              <p class="text-leon-dim">{{ number(active) }}/{{ themes.length }} — {{ active.name }}</p>
+              <p class="text-leon-dim">{{ number(active) }}/{{ themes.length }} — {{ themeLabel(active).name }}</p>
               <ul class="mt-1">
-                <li v-for="t in others" :key="t.id">
-                  <button type="button" class="leon-btn leon-btn-wrap w-full" :title="t.summary" @click="setTheme(t.id)">
-                    {{ number(t) }}. {{ t.name }}
+                <li v-for="th in others" :key="th.id">
+                  <button type="button" class="leon-btn leon-btn-wrap w-full" :title="themeLabel(th).summary" @click="setTheme(th.id)">
+                    {{ number(th) }}. {{ themeLabel(th).name }}
                   </button>
                 </li>
               </ul>
@@ -566,14 +623,24 @@ onBeforeUnmount(() => {
       <!-- 5. Barre d'état basse -->
       <footer class="leon-status leon-status-bottom">
         <span class="min-w-0 overflow-hidden text-ellipsis">
-          <span class="hidden sm:inline">LeonTechLab - Build Knowledge. Build a Better Future.</span>
-          <span class="sm:hidden">© LeonTechLab — {{ profile.name }}</span>
+          <span class="hidden sm:inline">{{ t('footer.motto') }}</span>
+          <span class="sm:hidden">{{ t('footer.short', { name: profile.name }) }}</span>
         </span>
         <span class="hidden shrink-0 gap-3 md:flex">
-          <button type="button" class="hover:text-leon-bright" @click="router.push({ name: 'home' })">[ ESC ] : Menu</button>
-          <button type="button" class="hover:text-leon-bright" @click="help = true">[ F1 ] : Aide</button>
+          <button type="button" class="hover:text-leon-bright" @click="router.push({ name: 'home' })">{{ t('footer.esc') }}</button>
+          <button type="button" class="hover:text-leon-bright" @click="help = true">{{ t('footer.f1') }}</button>
+          <button type="button" class="hover:text-leon-bright" @click="toggleCmd(true)">{{ t('footer.cmd') }}</button>
         </span>
-        <span class="shrink-0 text-leon-ink" aria-hidden="true">C:\&gt;<span class="leon-cursor" /></span>
+        <button
+          ref="cmdButton"
+          type="button"
+          class="leon-prompt shrink-0 text-leon-ink"
+          :aria-label="t('footer.prompt')"
+          :aria-expanded="cmdOpen"
+          @click="toggleCmd()"
+        >
+          C:\&gt;<span class="leon-cursor" aria-hidden="true" />
+        </button>
       </footer>
     </div>
   </div>

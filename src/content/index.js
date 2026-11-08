@@ -1,21 +1,27 @@
 import { parseFrontmatter } from '../core/frontmatter.js'
 import { renderMarkdown } from '../core/markdown.js'
+import { profile } from './profile.js'
+import { profileEn } from './profile.en.js'
+import { infrastructure, repoCategories, repos, systems } from './projects.js'
+import { infrastructureEn, repoCategoriesEn, reposEn, systemsEn } from './projects.en.js'
 
 /**
  * Point d'entrée du contenu, commun à toutes les formes.
  * Un article = un fichier Markdown dans src/content/articles/ (le nom du fichier sert d'adresse).
+ * Sa traduction anglaise, facultative, porte le même nom dans src/content/articles/en/.
  */
 
-export { profile } from './profile.js'
-export { repos, repoCategories, systems, infrastructure } from './projects.js'
+export { profile, repos, repoCategories, systems, infrastructure }
 
+/** `label` : libellé d'origine, en anglais ; `fr` : libellé français */
 export const categories = [
-  { id: 'speech-ai', label: 'Speech & NLP' },
-  { id: 'security', label: 'Offensive Sec & Hardware' },
-  { id: 'industrial', label: 'Cyber-Physical & Reliability' },
+  { id: 'speech-ai', label: 'Speech & NLP', fr: 'Parole & TAL' },
+  { id: 'security', label: 'Offensive Sec & Hardware', fr: 'Sécurité offensive & matériel' },
+  { id: 'industrial', label: 'Cyber-Physical & Reliability', fr: 'Cyber-physique & fiabilité' },
 ]
 
 const files = import.meta.glob('./articles/*.md', { query: '?raw', import: 'default', eager: true })
+const filesEn = import.meta.glob('./articles/en/*.md', { query: '?raw', import: 'default', eager: true })
 
 function estimateMinutes(body) {
   const words = body
@@ -57,6 +63,69 @@ export const articles = Object.entries(files)
   .sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug))
 
 export const findArticle = (slug) => articles.find((article) => article.slug === slug) ?? null
+
+/* ---------- Traductions anglaises ---------- */
+
+/** Titre, résumé, étiquette, métriques et texte anglais, par adresse d'article */
+const english = new Map(
+  Object.entries(filesEn).map(([path, raw]) => {
+    const slug = path.split('/').pop().replace(/\.md$/, '')
+    const { data, body } = parseFrontmatter(raw)
+    const html = body.trim() ? renderMarkdown(body) : null
+    return [slug, { title: data.title, abstract: data.abstract, tag: data.tag, metrics: data.metrics, html }]
+  }),
+)
+
+/** Applique une traduction : objets clé par clé, listes position par position */
+function merge(base, over) {
+  if (over === undefined || over === null) return base
+  if (Array.isArray(base)) return base.map((item, i) => merge(item, over[i]))
+  if (base && typeof base === 'object' && typeof over === 'object') {
+    const out = { ...base }
+    for (const key of Object.keys(over)) out[key] = merge(base[key], over[key])
+    return out
+  }
+  return over
+}
+
+function translateArticle(article) {
+  const tr = english.get(article.slug)
+  if (!tr) return { ...article, bodyLang: 'fr' }
+  return {
+    ...article,
+    title: tr.title ?? article.title,
+    abstract: tr.abstract ?? article.abstract,
+    tag: tr.tag ?? article.tag,
+    metrics: tr.metrics ?? article.metrics,
+    html: tr.html ?? article.html,
+    bodyLang: tr.html ? 'en' : 'fr',
+  }
+}
+
+const byLang = new Map()
+
+/**
+ * Tout le contenu dans une langue, 'fr' ou 'en'. Ce qui n'est pas traduit reste en
+ * français ; chaque article indique dans `bodyLang` la langue réelle de son texte.
+ * Les exports ci-dessus, utilisés par les autres formes, ne changent pas.
+ */
+export function contentIn(lang) {
+  const key = lang === 'en' ? 'en' : 'fr'
+  if (byLang.has(key)) return byLang.get(key)
+  const en = key === 'en'
+  const value = {
+    lang: key,
+    profile: en ? merge(profile, profileEn) : profile,
+    categories: categories.map((c) => ({ ...c, label: en ? c.label : c.fr })),
+    repoCategories: en ? repoCategories.map((c) => ({ ...c, label: repoCategoriesEn[c.id] ?? c.label })) : repoCategories,
+    repos: en ? repos.map((r) => ({ ...r, desc: reposEn[r.name] ?? r.desc })) : repos,
+    systems: en ? systems.map((s) => merge(s, systemsEn[s.code])) : systems,
+    infrastructure: en ? infrastructure.map((n) => merge(n, infrastructureEn[n.node])) : infrastructure,
+    articles: en ? articles.map(translateArticle) : articles.map((a) => ({ ...a, bodyLang: 'fr' })),
+  }
+  byLang.set(key, value)
+  return value
+}
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 

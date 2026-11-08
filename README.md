@@ -19,7 +19,7 @@ Six formes existent aujourd'hui :
 | 3 | `planche`           | Planche de bureau d'études : papier millimétré, cartouche, tirage ou cyanotype |
 | 4 | `mission`           | Contrôle de mission : radar orbital, télémétrie, essaim MCP, terminal Ctrl+K  |
 | 5 | `crt`               | Tube cathodique : phosphore cyan, lignes de balayage, pluie de caractères     |
-| 6 | `leontechlab`       | Console rétro : phosphore vert, menus « >> », bandeau lunaire en pixel art   |
+| 6 | `leontechlab`       | Console rétro bilingue FR/EN : bandeau lunaire en pixel art, invite de commande |
 
 Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
 `src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
@@ -233,6 +233,27 @@ def exemple():
 Profil, projets, dépôts et systèmes se modifient dans `src/content/profile.js` et
 `src/content/projects.js`. Le nom, le pseudo, le titre (`role`) et la photo (`avatar`)
 du profil reprennent ceux de github.com/leonbathie ; la photo est facultative.
+
+### Français et anglais (forme LeonTechLab)
+
+La forme LeonTechLab s'affiche dans la langue de l'appareil : français si le français
+figure dans ses préférences, anglais sinon. Le bouton **FR | EN** de la barre d'état, ou la
+commande `lang en` de l'invite de commande (Ctrl+K), change de langue et le choix est
+mémorisé. Un lien `?lang=en` ou `?lang=fr` impose la langue, par exemple
+`https://leonbathie.github.io/blog/?forme=leontechlab&lang=en`.
+
+Les traductions anglaises du contenu vivent à côté du français :
+
+```
+src/content/articles/en/<même-nom>.md   titre, résumé et texte anglais d'un article
+src/content/profile.en.js               profil, parcours, domaines, chiffres clés
+src/content/projects.en.js              dépôts, systèmes et nœuds de calcul
+```
+
+Tout ce qui n'est pas traduit reste en français. Un article dont le fichier anglais n'a
+qu'un en-tête garde son texte français, et la page le signale au lecteur. Les textes
+d'interface sont dans `src/themes/leontechlab/i18n.js`. Les autres formes restent en
+français.
 
 ---
 
