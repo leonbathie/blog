@@ -45,24 +45,24 @@ html[data-theme='evolution'] body {
 }
 .evo-title {
   font-family: 'Press Start 2P', monospace;
-  color: #f8fafc;
+  color: #f3eacd;
   text-shadow:
-    0 0 1px #fff,
-    3px 3px 0 #1e293b;
+    0 0 1px #fff8e6,
+    3px 3px 0 #2a2016;
   letter-spacing: 1px;
 }
 .evo-tag {
   font-family: 'Share Tech Mono', monospace;
   letter-spacing: 0.18em;
-  color: #e2e8f0;
+  color: #ece4cf;
 }
 .evo-domains {
   font-family: 'Share Tech Mono', monospace;
-  color: #cbd5e1;
+  color: #ece4cf;
 }
 .evo-domains li::before {
   content: '// ';
-  color: #64748b;
+  color: #a8a08c;
 }
 
 /* ---------- Frise des époques ---------- */
@@ -887,7 +887,7 @@ html[data-theme='evolution'] body {
 .evo-sub {
   font-size: 0.88rem;
   font-weight: 600;
-  color: #e2e8f0;
+  color: #ece4cf;
 }
 .evo-tag {
   font-size: 0.7rem;
@@ -904,7 +904,7 @@ html[data-theme='evolution'] body {
   .evo-banner-text {
     position: absolute;
     inset-block: 0;
-    left: 31%;
+    left: 34%;
     right: 33%;
     justify-content: center;
     gap: clamp(0.35rem, 0.9vw, 0.85rem);
@@ -912,7 +912,7 @@ html[data-theme='evolution'] body {
     pointer-events: none;
   }
   .evo-title {
-    font-size: clamp(1.05rem, 2.6vw, 2.5rem);
+    font-size: clamp(1.05rem, 2.85vw, 2.75rem);
   }
   .evo-sub {
     font-size: clamp(0.7rem, 1.15vw, 1.1rem);
