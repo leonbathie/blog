@@ -1,20 +1,23 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { articles, categories, profile } from '../../content/index.js'
 import { useThemes } from '../../core/themes.js'
 import { copyText } from '../../core/clipboard.js'
-import { createHero, HERO_H, HERO_W } from './hero.js'
+import { createHero, LAYOUTS } from './hero.js'
+import { dateHorloge, heureHorloge, moisCourt } from './format.js'
 import ArticlesView from './components/ArticlesView.vue'
 import ProjectsView from './components/ProjectsView.vue'
 import LabView from './components/LabView.vue'
 import AboutView from './components/AboutView.vue'
+import ProfileAvatar from './components/ProfileAvatar.vue'
 import './theme.css'
 
 /*
  * Forme 6 — « LeonTechLab »
- * Portail rétro : terminal à phosphore vert, barre beige biseautée des
- * années 90, cadres néon et bandeau d'accueil en pixel art.
+ * Console rétro : écran à phosphore vert encadré, barre d'état et horloge,
+ * bandeau lunaire en pixel art, navigation « [ crochets ] », trois colonnes
+ * de panneaux « :: Titre :: », titres d'articles cyan.
  *
  * L'écusson du bandeau est un dessin original : on ne reprend pas l'emblème
  * d'une agence spatiale réelle, qui laisserait croire à une affiliation.
@@ -36,27 +39,28 @@ function showToast(msg) {
 }
 provide('leon', { toast: showToast })
 
-/* ---------- Bandeau d'accueil ---------- */
+/* ---------- Bandeau ---------- */
+// Même seuil que le préfixe `sm:` de Tailwind, qui place le titre par-dessus.
+const compactQuery = window.matchMedia('(max-width: 639px)')
+// Taille initiale seulement : c'est hero.js qui redimensionne ensuite le canevas.
+// Lier ces attributs à une valeur réactive effacerait l'image à chaque bascule.
+const heroInit = compactQuery.matches ? LAYOUTS.compact : LAYOUTS.wide
 const heroCanvas = ref(null)
 let hero = null
-function fireRocket() {
-  if (hero?.fire()) showToast('🚀 Allumage des propulseurs LeonTechLab !')
+let heroSeen = null // l'animation s'arrête quand le bandeau sort de l'écran
+const onCompactChange = (e) => hero?.setCompact(e.matches)
+function fireLander() {
+  if (hero?.fire()) showToast("Décollage de l'étage de remontée !")
 }
 
-/* ---------- Horloge française ---------- */
-const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-const MOIS = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
-]
-const clock = ref('')
+/* ---------- Horloge ---------- */
+const clockDate = ref('')
+const clockTime = ref('')
 let clockTimer = 0
 function tickClock() {
   const d = new Date()
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  const ss = String(d.getSeconds()).padStart(2, '0')
-  clock.value = `${JOURS[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${MOIS[d.getMonth()]} ${d.getFullYear()}   ${hh}:${mm}:${ss}`
+  clockDate.value = dateHorloge(d)
+  clockTime.value = heureHorloge(d)
 }
 
 /* ---------- Sections ---------- */
@@ -64,27 +68,38 @@ const view = computed(
   () => ({ projects: 'projects', lab: 'lab', arena: 'lab', about: 'about' })[route.name] ?? 'articles',
 )
 const reading = computed(() => route.name === 'article')
+/** L'accueil montre tous les articles ; la page « Articles » ajoute recherche et filtres. */
+const listMode = computed(() => (route.name === 'articles' ? 'list' : 'home'))
+const contact = computed(() => route.name === 'about' && route.hash === '#contact')
 
 const LAB_IDS = ['glitch', 'pulaar', 'weibull']
 const labModule = computed(() => (LAB_IDS.includes(route.params.module) ? route.params.module : 'glitch'))
 
-/**
- * La maquette propose « Accueil » et « Articles », qui mènent au même endroit.
- * On les distingue sur l'état plutôt que sur la destination : Accueil = l'index,
- * Articles = un article ouvert. Sans ça, les deux onglets paraissaient enfoncés
- * en même temps.
- */
 const NAV = computed(() => [
-  { key: 'home', label: 'Accueil', to: { name: 'home' } },
-  { key: 'reading', label: 'Articles', to: { name: 'article', params: { slug: selected.value?.slug ?? articles[0]?.slug } } },
-  { key: 'projects', label: `Projets (GitHub ${profile.githubRepoCount})`, to: { name: 'projects' } },
-  { key: 'lab', label: 'Recherche & Cyber-Lab', to: { name: 'lab', params: { module: labModule.value } } },
-  { key: 'about', label: 'À propos', to: { name: 'about' } },
+  { key: 'home', label: 'Accueil', to: { name: 'home' }, hotkey: '1' },
+  { key: 'articles', label: 'Articles', to: { name: 'articles' }, hotkey: '2' },
+  { key: 'projects', label: 'Projets', to: { name: 'projects' }, hotkey: '3' },
+  { key: 'lab', label: 'Recherche', to: { name: 'lab', params: { module: labModule.value } }, hotkey: '4' },
+  { key: 'github', label: 'GitHub', href: profile.links.github },
+  { key: 'about', label: 'À propos', to: { name: 'about' }, hotkey: '5' },
+  { key: 'contact', label: 'Contact', to: { name: 'about', hash: '#contact' }, hotkey: '6' },
 ])
-function navActive(item) {
-  if (item.key === 'home') return view.value === 'articles' && !reading.value
-  if (item.key === 'reading') return reading.value
-  return item.key === view.value
+function navActive(key) {
+  switch (key) {
+    case 'home':
+      return route.name === 'home'
+    case 'articles':
+      return route.name === 'articles' || reading.value
+    case 'projects':
+    case 'lab':
+      return view.value === key
+    case 'about':
+      return view.value === 'about' && !contact.value
+    case 'contact':
+      return contact.value
+    default:
+      return false
+  }
 }
 
 /* ---------- Articles ---------- */
@@ -103,268 +118,463 @@ async function copyBibtex() {
   if (!selected.value) return
   showToast((await copyText(selected.value.bibtex)) ? 'Citation BibTeX copiée' : 'La copie a échoué')
 }
-function submitSearch() {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return
-  const hit = articles.find((a) => `${a.title} ${a.abstract} ${a.tag}`.toLowerCase().includes(q))
-  if (hit) {
-    selectArticle(hit.slug)
-    showToast(`Résultat : ${hit.title}`)
-  } else {
-    showToast('Aucun article ne correspond')
-  }
+function openArchives(cat = 'all') {
+  filter.value = cat
   query.value = ''
+  router.push({ name: 'articles' })
 }
 
-/* ---------- Barre latérale ---------- */
-const DOMAINES = [
-  { glyph: '▚', label: 'Intelligence Artificielle', cat: 'speech-ai' },
-  { glyph: '◆', label: 'Machine Learning & ASR', cat: 'speech-ai' },
-  { glyph: '▲', label: 'Cybersécurité & Hardware', cat: 'security' },
-  { glyph: '✦', label: 'Espace & Sciences', cat: 'security' },
-  { glyph: '▦', label: 'Informatique & Réseaux CCNA', cat: 'security' },
-  { glyph: '⚙', label: 'GMAO & Maintenance', cat: 'industrial' },
-  { glyph: '◉', label: 'Innovation Africaine (Pulaar/Wolof)', cat: 'speech-ai' },
+/* ---------- Menu principal (colonne de gauche) ---------- */
+const MENU = computed(() => [
+  { key: 'home', label: 'Accueil', to: { name: 'home' } },
+  { key: 'articles', label: 'Articles', cat: 'all' },
+  { key: 'projects', label: 'Projets', to: { name: 'projects' } },
+  { key: 'lab', label: 'Recherche & Cyber-Lab', to: { name: 'lab', params: { module: labModule.value } } },
+  { key: 'cat:security', label: 'Cybersécurité & Hardware', cat: 'security' },
+  { key: 'cat:industrial', label: 'GMAO & Industrie', cat: 'industrial' },
+  { key: 'cat:speech-ai', label: 'IA en Afrique', cat: 'speech-ai' },
+  { key: 'about', label: 'À propos', to: { name: 'about' } },
+  { key: 'contact', label: 'Contact', to: { name: 'about', hash: '#contact' } },
+])
+function menuActive(item) {
+  if (item.cat) return route.name === 'articles' && filter.value === item.cat
+  return navActive(item.key)
+}
+function pickMenu(item) {
+  if (!item.cat) return router.push(item.to)
+  openArchives(item.cat)
+  if (item.cat !== 'all') showToast(`Domaine : ${categories.find((c) => c.id === item.cat)?.label ?? item.cat}`)
+}
+
+/* ---------- Outils ---------- */
+const searchInput = ref(null)
+const searchText = ref('')
+function submitSearch() {
+  const q = searchText.value.trim()
+  if (!q) return
+  filter.value = 'all'
+  query.value = q
+  searchText.value = ''
+  router.push({ name: 'articles' })
+}
+function randomArticle() {
+  const pool = reading.value ? articles.filter((a) => a.slug !== selected.value?.slug) : articles
+  const pick = pool[Math.floor(Math.random() * pool.length)]
+  if (!pick) return
+  selectArticle(pick.slug)
+  showToast('Article tiré au sort')
+}
+
+/* ---------- Colonne de droite ---------- */
+const CITATIONS = [
+  { text: 'La technologie au service d’un monde meilleur.', by: 'LeonTechLab' },
+  { text: 'Build Knowledge. Build a Better Future.', by: 'LeonTechLab' },
+  { text: 'Dream it. Build it. Share it.', by: 'LeonTechLab' },
+  { text: 'Construire un pont entre la science, l’innovation et notre patrimoine.', by: profile.name },
 ]
+const citation = CITATIONS[Math.floor(Date.now() / 86_400_000) % CITATIONS.length]
+
 const LIENS = [
-  { label: 'GitHub (@leonbathie)', url: 'https://github.com/leonbathie' },
+  { label: 'GitHub', url: profile.links.github },
+  { label: 'LinkedIn', url: profile.links.linkedin },
   { label: 'Hugging Face', url: 'https://huggingface.co' },
-  { label: 'ArXiv', url: 'https://arxiv.org' },
-  { label: 'Papers with Code', url: 'https://paperswithcode.com' },
+  { label: 'arXiv', url: 'https://arxiv.org' },
+  { label: 'Anthropic', url: 'https://www.anthropic.com' },
   { label: 'DeepMind', url: 'https://deepmind.google' },
   { label: 'OpenAI', url: 'https://openai.com' },
-  { label: 'Anthropic', url: 'https://anthropic.com' },
+  { label: 'Scholar', url: 'https://scholar.google.com' },
 ]
-function pickDomain(cat) {
-  filter.value = cat
-  if (view.value !== 'articles' || reading.value) router.push({ name: 'home' })
-  showToast(`Domaine : ${categories.find((c) => c.id === cat)?.label ?? cat}`)
+
+/* Lettre d'information : sans serveur, la demande part de la messagerie du visiteur */
+const email = ref('')
+function subscribe() {
+  const subject = encodeURIComponent('Abonnement aux articles LeonTechLab')
+  const body = encodeURIComponent(
+    `Bonjour ${profile.name},\n\nJe souhaite être prévenu(e) des nouveaux articles de LeonTechLab.\nMon adresse : ${email.value.trim()}\n`,
+  )
+  window.location.href = `mailto:${profile.links.email}?subject=${subject}&body=${body}`
+  showToast('Ouverture de votre messagerie…')
 }
 
-const stats = computed(() => [
-  { label: 'Articles publiés', value: articles.length },
-  { label: 'Dépôts GitHub', value: profile.githubRepoCount },
-  { label: 'Formes du blog', value: themes.length },
-])
+const oldest = articles[articles.length - 1]
+const stats = [
+  { label: 'Articles', value: articles.length },
+  { label: 'Dépôts', value: profile.githubRepoCount },
+  { label: 'Formes', value: themes.length },
+  { label: 'Depuis', value: oldest ? moisCourt(oldest.date) : '—' },
+]
 
 const others = computed(() => themes.filter((t) => t.id !== active.value.id))
 
+/* ---------- Aide et raccourcis clavier ---------- */
+const help = ref(false)
+const helpClose = ref(null)
+let helpReturn = null
+const SHORTCUTS = [
+  ['1 … 6', 'Accueil, Articles, Projets, Recherche, À propos, Contact'],
+  ['/', 'Rechercher un article'],
+  ['Échap', 'Fermer, revenir à la liste puis à l’accueil'],
+  ['F1', 'Cette aide'],
+]
+watch(help, async (open) => {
+  if (open) {
+    helpReturn = document.activeElement
+    await nextTick()
+    helpClose.value?.focus()
+  } else {
+    helpReturn?.focus?.()
+    helpReturn = null
+  }
+})
+
+function onKey(e) {
+  if (e.key === 'F1') {
+    e.preventDefault()
+    help.value = !help.value
+    return
+  }
+  const el = e.target
+  const typing = el instanceof HTMLElement && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)
+  if (e.key === 'Escape') {
+    if (help.value) help.value = false
+    else if (typing) el.blur()
+    else if (reading.value) router.push({ name: 'articles' })
+    else if (route.name !== 'home') router.push({ name: 'home' })
+    return
+  }
+  if (typing || help.value || e.ctrlKey || e.metaKey || e.altKey) return
+  if (e.key === '/') {
+    e.preventDefault()
+    ;(document.getElementById('leon-list-q') ?? searchInput.value)?.focus()
+    return
+  }
+  const item = NAV.value.find((n) => n.hotkey === e.key)
+  if (item) router.push(item.to)
+}
+
+/* ---------- Barre d'onglets : l'onglet courant reste visible ---------- */
+const navBar = ref(null)
+function revealActiveTab() {
+  const nav = navBar.value
+  const link = nav?.querySelector('.leon-nav-link-on')
+  if (!nav || !link || nav.scrollWidth <= nav.clientWidth) return
+  const box = nav.getBoundingClientRect()
+  const tab = link.getBoundingClientRect()
+  // Défilement horizontal de la barre seule : scrollIntoView bougerait aussi la page.
+  nav.scrollBy({ left: tab.left - box.left - (box.width - tab.width) / 2, behavior: 'smooth' })
+}
+/*
+ * Sur téléphone, le bandeau occupe près de la moitié de l'écran. Sur une page
+ * intérieure, on défile donc jusqu'à la barre d'onglets : le contenu apparaît
+ * tout de suite, et le bandeau reste à portée en remontant.
+ */
+const heroBox = ref(null)
+function contentTop() {
+  if (route.name === 'home' || !compactQuery.matches || !heroBox.value) return 0
+  return Math.round(heroBox.value.getBoundingClientRect().bottom + window.scrollY)
+}
+watch(
+  () => `${String(route.name)}|${route.params.slug ?? ''}|${route.hash}`,
+  async () => {
+    if (!route.hash) window.scrollTo({ top: contentTop(), behavior: 'smooth' })
+    await nextTick()
+    revealActiveTab()
+  },
+)
+
+/* ---------- Cycle de vie ---------- */
 onMounted(() => {
-  document.title = 'LeonTechLab — Ousmane Ba | AI • Science • Innovation'
+  document.title = `LeonTechLab — ${profile.name} (@${profile.handle}) | AI Research Lab`
   root.classList.add('dark')
   tickClock()
   clockTimer = window.setInterval(tickClock, 1000)
+  compactQuery.addEventListener('change', onCompactChange)
+  window.addEventListener('keydown', onKey)
   if (heroCanvas.value) {
-    hero = createHero(heroCanvas.value)
+    hero = createHero(heroCanvas.value, { compact: compactQuery.matches })
     hero.start()
+    // Sur téléphone, on lit sous le bandeau : inutile de l'animer hors de vue.
+    if ('IntersectionObserver' in window) {
+      heroSeen = new IntersectionObserver(([entry]) => (entry.isIntersecting ? hero?.start() : hero?.stop()))
+      heroSeen.observe(heroCanvas.value)
+    }
   }
+  // Arrivée directe sur une page intérieure (lien partagé) : même logique,
+  // sauf si le navigateur a déjà restauré une position de lecture.
+  if (!route.hash && window.scrollY === 0) window.scrollTo({ top: contentTop() })
+  revealActiveTab()
 })
 
 onBeforeUnmount(() => {
   window.clearInterval(clockTimer)
   window.clearTimeout(toastTimer)
+  compactQuery.removeEventListener('change', onCompactChange)
+  window.removeEventListener('keydown', onKey)
+  heroSeen?.disconnect()
   hero?.dispose()
   root.classList.remove('dark')
 })
-
-watch(view, () => window.scrollTo({ top: 0, behavior: 'smooth' }))
 </script>
 
 <template>
-  <div class="theme-leon flex min-h-screen flex-col text-leon-ink antialiased">
+  <div class="theme-leon antialiased">
     <!-- Notification -->
     <div
       role="status"
       aria-live="polite"
-      class="leon-box pointer-events-none fixed bottom-4 right-4 z-[80] px-3 py-2 text-[0.7rem] text-leon-green transition-all duration-300"
+      class="leon-panel pointer-events-none fixed bottom-4 right-4 z-[80] max-w-[calc(100vw-2rem)] px-3 py-1 text-[1.05rem] text-leon-green transition-all duration-300"
       :class="toast.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'"
     >
       [SYS] {{ toast.msg }}
     </div>
 
-    <!-- 1. Barre d'état -->
-    <div class="border-b border-leon-green/40 bg-leon-bg/90 px-3 py-1.5 text-[0.64rem] sm:px-4">
-      <div class="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <span class="text-leon-green">
-          LeonTechLab v1.0 <span class="text-leon-dim">—</span>
-          <span class="text-leon-gold">Build</span> •
-          <span class="text-leon-gold">Learn</span> •
-          <span class="text-leon-gold">Innovate</span>
-        </span>
-        <span class="text-leon-gold">{{ clock }}</span>
+    <!-- Aide (F1) -->
+    <div
+      v-if="help"
+      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="leon-help-title"
+      @click.self="help = false"
+    >
+      <div class="leon-panel w-full max-w-md">
+        <h2 id="leon-help-title" class="leon-panel-head">Aide — raccourcis clavier</h2>
+        <div class="leon-panel-body text-[1.1rem]">
+          <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1">
+            <template v-for="[key, what] in SHORTCUTS" :key="key">
+              <dt class="text-leon-gold">[ {{ key }} ]</dt>
+              <dd class="text-leon-ink/85">{{ what }}</dd>
+            </template>
+          </dl>
+          <p class="mt-3 text-leon-dim">Un clic sur le bandeau fait décoller le module lunaire.</p>
+          <div class="mt-3 text-right">
+            <button ref="helpClose" type="button" class="leon-btn" @click="help = false">Fermer</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="mx-auto w-full max-w-[1180px] flex-1 px-2 py-3 sm:px-4">
-      <!-- 2. Bandeau d'accueil -->
-      <header class="leon-box relative overflow-hidden">
-        <button
-          type="button"
-          class="block w-full"
-          title="Cliquez pour lancer la fusée LeonTechLab"
-          @click="fireRocket"
-        >
-          <canvas ref="heroCanvas" :width="HERO_W" :height="HERO_H" class="leon-hero-canvas" aria-hidden="true" />
-        </button>
-
-        <!-- Titre superposé -->
-        <div class="pointer-events-none absolute inset-0 flex items-center">
-          <div class="pl-[20%] pr-4 sm:pl-[19%]">
-            <h1 class="leon-title text-xl leading-tight sm:text-3xl lg:text-4xl">LeonTechLab</h1>
-            <p class="mt-1 font-silk text-[0.56rem] text-leon-green sm:text-[0.72rem]">
-              AI <span class="text-leon-gold">•</span> Science <span class="text-leon-gold">•</span> Innovation
-            </p>
-            <p class="mt-2 hidden text-[0.68rem] italic text-leon-beige sm:block">
-              Exploring the frontiers of Technology…
-            </p>
-          </div>
-          <div class="ml-auto hidden pr-5 text-right font-silk text-[0.6rem] leading-relaxed text-leon-gold lg:block">
-            <div>Dream it.</div>
-            <div>Build it.</div>
-            <div>Share it.</div>
-          </div>
-        </div>
+    <div class="leon-screen">
+      <!-- 1. Barre d'état -->
+      <header class="leon-status">
+        <span class="min-w-0 overflow-hidden text-ellipsis">
+          [LeonTechLab v1.0<span class="hidden sm:inline"> &nbsp;—&nbsp; {{ profile.name }} / AI Research Lab</span>
+        </span>
+        <span class="shrink-0 text-leon-gold">
+          [ <span class="hidden sm:inline">{{ clockDate }} &nbsp;</span>{{ clockTime }} ]
+        </span>
       </header>
 
-      <!-- 3. Barre de navigation beige -->
-      <nav class="leon-navbar mt-3 flex flex-wrap items-center gap-x-1 gap-y-1 px-2 py-1.5" aria-label="Navigation principale">
-        <RouterLink
-          v-for="item in NAV"
-          :key="item.key"
-          :to="item.to"
-          class="leon-nav-link"
-          :class="navActive(item) ? 'leon-nav-link-on' : ''"
-          :aria-current="navActive(item) ? 'page' : undefined"
+      <!-- 2. Bandeau lunaire -->
+      <section ref="heroBox" class="leon-hero" aria-label="Bandeau LeonTechLab">
+        <button
+          type="button"
+          class="block w-full cursor-pointer"
+          title="Cliquez pour faire décoller le module lunaire"
+          aria-label="Faire décoller le module lunaire"
+          @click="fireLander"
         >
-          {{ item.label }}
-        </RouterLink>
+          <canvas ref="heroCanvas" :width="heroInit.w" :height="heroInit.h" class="leon-hero-canvas" aria-hidden="true" />
+        </button>
 
-        <form class="ml-auto flex items-center gap-1" role="search" @submit.prevent="submitSearch">
-          <label for="leon-search" class="sr-only">Rechercher un article</label>
-          <input
-            id="leon-search"
-            v-model="query"
-            type="search"
-            placeholder="Rechercher…"
-            class="w-28 border-2 border-[#6e6049] bg-[#fdfaf2] px-2 py-0.5 text-[0.7rem] text-[#1a1612] sm:w-44"
-          />
-          <button type="submit" class="border-2 border-[#fff8eb] border-b-[#6e6049] border-r-[#6e6049] bg-[#d2c2a8] px-2 py-0.5 text-[0.7rem] text-[#1a1612]">
-            🔍
-          </button>
-        </form>
+        <!-- Titre superposé : entre l'écusson et le sol lunaire -->
+        <div
+          class="pointer-events-none absolute bottom-[33%] left-[3%] right-[3%] top-[33%] flex flex-col items-center justify-center text-center sm:inset-y-0 sm:left-[22%] sm:right-[37%]"
+        >
+          <component :is="reading ? 'p' : 'h1'" class="leon-title text-[1.4rem] leading-none sm:text-[clamp(1.1rem,2.9vw,2.6rem)]">
+            LeonTechLab
+          </component>
+          <p class="leon-subtitle mt-2 text-[1.08rem] leading-none sm:mt-3 sm:text-[clamp(1rem,1.6vw,1.45rem)]">
+            Research • Innovation • Knowledge
+          </p>
+          <p class="mt-2 hidden italic leading-tight text-leon-bright-gold sm:block sm:text-[clamp(0.95rem,1.3vw,1.25rem)]">
+            "Exploring the frontiers of Artificial Intelligence..."
+          </p>
+          <p class="mt-2 text-[1rem] leading-none text-leon-green sm:text-[clamp(0.95rem,1.15vw,1.1rem)]">
+            par {{ profile.name }} <span class="text-leon-dim">·</span> @{{ profile.handle }}
+          </p>
+        </div>
+      </section>
+
+      <!-- 3. Barre de navigation -->
+      <nav ref="navBar" class="leon-nav" aria-label="Navigation principale">
+        <template v-for="item in NAV" :key="item.key">
+          <a v-if="item.href" :href="item.href" target="_blank" rel="noopener noreferrer" class="leon-nav-link">
+            {{ item.label }}<span class="sr-only"> (nouvel onglet)</span>
+          </a>
+          <RouterLink
+            v-else
+            :to="item.to"
+            class="leon-nav-link"
+            :class="navActive(item.key) ? 'leon-nav-link-on' : ''"
+            :aria-current="navActive(item.key) ? 'page' : undefined"
+          >
+            {{ item.label }}
+          </RouterLink>
+        </template>
       </nav>
 
-      <!-- 4. Grille à trois colonnes -->
-      <div class="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[200px_minmax(0,1fr)_212px]">
-        <!-- Colonne de gauche.
-             `order` : sur téléphone les colonnes s'empilent, et le contenu doit
-             venir en premier — sinon il faut faire défiler trois encadrés avant
-             d'atteindre le moindre article. -->
-        <aside class="order-2 space-y-3 lg:order-none">
-          <section class="leon-box p-2.5">
-            <h2 class="leon-box-header font-silk text-[0.62rem]">Domaines</h2>
-            <ul class="space-y-1 text-[0.68rem]">
-              <li v-for="d in DOMAINES" :key="d.label">
-                <button type="button" class="flex w-full items-start gap-1.5 text-left hover:text-leon-green" @click="pickDomain(d.cat)">
-                  <span class="text-leon-gold">{{ d.glyph }}</span>
-                  <span class="leading-snug">{{ d.label }}</span>
+      <!-- 4. Trois colonnes ; sur téléphone une seule, le contenu d'abord -->
+      <div class="grid flex-1 grid-cols-1 gap-2 p-2 sm:grid-cols-2 lg:grid-cols-[220px_minmax(0,1fr)_236px] lg:gap-2.5 lg:p-2.5">
+        <!-- Colonne de gauche -->
+        <aside class="order-3 space-y-2 lg:order-none">
+          <section class="leon-panel hidden lg:block">
+            <h2 class="leon-panel-head">Menu Principal</h2>
+            <ul class="py-1">
+              <li v-for="item in MENU" :key="item.key">
+                <button
+                  type="button"
+                  class="leon-menu-item"
+                  :class="menuActive(item) ? 'leon-menu-item-on' : ''"
+                  :aria-current="menuActive(item) ? 'page' : undefined"
+                  @click="pickMenu(item)"
+                >
+                  <span class="min-w-0 leading-tight">{{ item.label }}</span>
                 </button>
               </li>
             </ul>
           </section>
 
-          <section class="leon-box p-2.5">
-            <h2 class="leon-box-header font-silk text-[0.62rem]">Liens utiles</h2>
-            <ul class="space-y-0.5 text-[0.68rem]">
-              <li v-for="l in LIENS" :key="l.label">
-                <a :href="l.url" target="_blank" rel="noopener noreferrer" class="flex justify-between gap-2 hover:text-leon-green">
-                  <span>{{ l.label }}</span><span class="text-leon-gold">›</span>
+          <section class="leon-panel">
+            <h2 class="leon-panel-head">Outils</h2>
+            <div class="py-1">
+              <form class="leon-menu-item leon-menu-form" role="search" @submit.prevent="submitSearch">
+                <label for="leon-search" class="shrink-0">Recherche&nbsp;:</label>
+                <input
+                  id="leon-search"
+                  ref="searchInput"
+                  v-model="searchText"
+                  type="search"
+                  enterkeyhint="search"
+                  placeholder="_"
+                  class="leon-field"
+                  autocomplete="off"
+                />
+              </form>
+              <button type="button" class="leon-menu-item" @click="openArchives()">Archives</button>
+              <button type="button" class="leon-menu-item" @click="randomArticle">Article au hasard</button>
+              <button type="button" class="leon-menu-item" @click="help = true">Aide (F1)</button>
+            </div>
+          </section>
+
+          <section class="leon-panel">
+            <h2 class="leon-panel-head">Compteur</h2>
+            <ul class="leon-panel-body text-[1.08rem] leading-tight">
+              <li v-for="s in stats" :key="s.label" class="flex justify-between gap-2">
+                <span class="text-leon-ink/85">{{ s.label }}</span>
+                <span class="text-leon-green">: {{ s.value }}</span>
+              </li>
+            </ul>
+          </section>
+        </aside>
+
+        <!-- Colonne centrale -->
+        <main class="order-1 min-w-0 sm:col-span-2 lg:order-none lg:col-span-1">
+          <ArticlesView
+            v-if="view === 'articles'"
+            v-model:filter="filter"
+            v-model:query="query"
+            :mode="listMode"
+            :selected="selected"
+            :reading="reading"
+            @copy-bibtex="copyBibtex"
+            @open-lab="openLab"
+            @close="router.push({ name: 'articles' })"
+          />
+          <ProjectsView v-else-if="view === 'projects'" />
+          <LabView v-else-if="view === 'lab'" :module="labModule" />
+          <AboutView v-else-if="view === 'about'" :contact="contact" />
+        </main>
+
+        <!-- Colonne de droite -->
+        <aside class="order-2 space-y-2 lg:order-none">
+          <section class="leon-panel">
+            <h2 class="leon-panel-head">Profil</h2>
+            <div class="leon-panel-body flex gap-3">
+              <ProfileAvatar :size="64" />
+              <div class="min-w-0 text-[1.06rem] leading-tight">
+                <p class="text-[1.2rem] leading-tight text-leon-gold">{{ profile.name }}</p>
+                <a :href="profile.links.github" target="_blank" rel="noopener noreferrer" class="text-leon-green hover:text-leon-bright">
+                  @{{ profile.handle }}
+                </a>
+                <p class="text-leon-ink/85">{{ profile.role }}</p>
+                <p class="text-leon-dim">{{ profile.city }}</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-x-1 px-2 pb-2">
+              <a :href="profile.links.github" target="_blank" rel="noopener noreferrer" class="leon-btn">GitHub</a>
+              <a :href="profile.links.linkedin" target="_blank" rel="noopener noreferrer" class="leon-btn">LinkedIn</a>
+              <RouterLink :to="{ name: 'about' }" class="leon-btn">Parcours</RouterLink>
+            </div>
+          </section>
+
+          <section class="leon-panel">
+            <h2 class="leon-panel-head">Citation</h2>
+            <blockquote class="leon-panel-body text-[1.08rem] leading-tight">
+              <p class="italic text-leon-ink/90">« {{ citation.text }} »</p>
+              <footer class="mt-1 text-right text-leon-gold">— {{ citation.by }}</footer>
+            </blockquote>
+          </section>
+
+          <section class="leon-panel">
+            <h2 class="leon-panel-head">Newsletter</h2>
+            <form class="leon-panel-body text-[1.06rem]" @submit.prevent="subscribe">
+              <p class="leading-tight text-leon-ink/85">Recevez les nouveaux articles par courriel&nbsp;:</p>
+              <label for="leon-email" class="sr-only">Votre adresse de courriel</label>
+              <input
+                id="leon-email"
+                v-model="email"
+                type="email"
+                class="leon-field mt-2"
+                placeholder="[ Votre email... ]"
+                autocomplete="email"
+                required
+              />
+              <div class="mt-2 text-center">
+                <button type="submit" class="leon-btn leon-btn-gold">S'abonner</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="leon-panel">
+            <h2 class="leon-panel-head">Liens</h2>
+            <ul class="leon-panel-body grid grid-cols-2 gap-x-3 gap-y-0.5 text-[1.06rem]">
+              <li v-for="(l, i) in LIENS" :key="l.label" class="min-w-0" :class="i % 2 === 0 ? 'border-r border-leon-green/40 pr-2' : ''">
+                <a :href="l.url" target="_blank" rel="noopener noreferrer" class="block truncate text-leon-green hover:text-leon-bright">
+                  {{ l.label }}
                 </a>
               </li>
             </ul>
           </section>
 
-          <section class="leon-box p-2.5 text-[0.68rem]">
-            <div class="text-leon-green">$ whoami</div>
-            <div class="mt-1 text-leon-gold">{{ profile.name }}</div>
-            <div class="text-leon-ink/75">AI Engineer &amp; Researcher</div>
-            <div class="text-leon-ink/75">{{ profile.city }}, {{ profile.country }}</div>
-            <div class="mt-1 text-leon-green">$ <span class="animate-pulse">▌</span></div>
-          </section>
-        </aside>
-
-        <!-- Colonne centrale -->
-        <main class="order-1 min-w-0 lg:order-none">
-          <ArticlesView
-            v-if="view === 'articles'"
-            v-model:filter="filter"
-            :selected="selected"
-            :reading="reading"
-            @select="selectArticle"
-            @copy-bibtex="copyBibtex"
-            @open-lab="openLab"
-            @close="router.push({ name: 'home' })"
-          />
-          <ProjectsView v-else-if="view === 'projects'" />
-          <LabView v-else-if="view === 'lab'" :module="labModule" />
-          <AboutView v-else-if="view === 'about'" />
-        </main>
-
-        <!-- Colonne de droite -->
-        <aside class="order-3 space-y-3 lg:order-none">
-          <section class="leon-box p-2.5">
-            <h2 class="leon-box-header font-silk text-[0.62rem]">À propos</h2>
-            <div class="text-[0.68rem]">
-              <div class="font-silk text-[0.6rem] text-leon-gold">{{ profile.name }}</div>
-              <p class="mt-1.5 leading-relaxed text-leon-ink/75">
-                Ingénieur en IA, passionné de technologie et de culture africaine.
-              </p>
-              <p class="mt-2 leading-relaxed text-leon-ink/75">
-                Construire un pont entre la science, l'innovation et notre patrimoine.
-              </p>
-              <RouterLink :to="{ name: 'about' }" class="mt-2 block text-leon-green hover:text-leon-bright">
-                → En savoir plus…
-              </RouterLink>
-            </div>
-          </section>
-
-          <section class="leon-box p-2.5">
-            <h2 class="leon-box-header font-silk text-[0.62rem]">✉ Contact</h2>
-            <p class="text-[0.68rem] leading-relaxed text-leon-ink/75">
-              Une question, une collaboration&nbsp;?
-            </p>
-            <a :href="`mailto:${profile.links.email}`" class="leon-btn leon-btn-gold mt-2 w-full">Écrire</a>
-          </section>
-
-          <section class="leon-box p-2.5">
-            <h2 class="leon-box-header font-silk text-[0.62rem]">📊 Statistiques</h2>
-            <ul class="space-y-1 text-[0.68rem]">
-              <li v-for="s in stats" :key="s.label" class="flex justify-between gap-2">
-                <span class="text-leon-ink/75">{{ s.label }}</span>
-                <span class="text-leon-green">{{ s.value }}</span>
-              </li>
-            </ul>
-          </section>
-
-          <section v-if="archive" class="leon-box p-2.5">
-            <h2 class="leon-box-header font-silk text-[0.62rem]">Formes</h2>
-            <p class="mb-1.5 text-[0.64rem] text-leon-dim">{{ number(active) }}/{{ themes.length }} — {{ active.name }}</p>
-            <div class="flex flex-wrap gap-1">
-              <button v-for="t in others" :key="t.id" type="button" class="leon-btn text-[0.62rem]" :title="t.summary" @click="setTheme(t.id)">
-                {{ number(t) }}. {{ t.name }}
-              </button>
+          <section v-if="archive" class="leon-panel">
+            <h2 class="leon-panel-head">Formes du blog</h2>
+            <div class="leon-panel-body text-[1.06rem]">
+              <p class="text-leon-dim">{{ number(active) }}/{{ themes.length }} — {{ active.name }}</p>
+              <ul class="mt-1">
+                <li v-for="t in others" :key="t.id">
+                  <button type="button" class="leon-btn leon-btn-wrap w-full" :title="t.summary" @click="setTheme(t.id)">
+                    {{ number(t) }}. {{ t.name }}
+                  </button>
+                </li>
+              </ul>
             </div>
           </section>
         </aside>
       </div>
+
+      <!-- 5. Barre d'état basse -->
+      <footer class="leon-status leon-status-bottom">
+        <span class="min-w-0 overflow-hidden text-ellipsis">
+          <span class="hidden sm:inline">LeonTechLab - Build Knowledge. Build a Better Future.</span>
+          <span class="sm:hidden">© LeonTechLab — {{ profile.name }}</span>
+        </span>
+        <span class="hidden shrink-0 gap-3 md:flex">
+          <button type="button" class="hover:text-leon-bright" @click="router.push({ name: 'home' })">[ ESC ] : Menu</button>
+          <button type="button" class="hover:text-leon-bright" @click="help = true">[ F1 ] : Aide</button>
+        </span>
+        <span class="shrink-0 text-leon-ink" aria-hidden="true">C:\&gt;<span class="leon-cursor" /></span>
+      </footer>
     </div>
-
-    <!-- 5. Pied de page -->
-    <footer class="mt-4 border-t border-leon-green/40 bg-leon-bg/90 px-3 py-2 text-[0.64rem] sm:px-4">
-      <div class="mx-auto flex max-w-[1180px] flex-col items-center justify-between gap-1 text-center sm:flex-row sm:text-left">
-        <span class="text-leon-dim">© 2026 LeonTechLab — {{ profile.name }}</span>
-        <span class="text-leon-gold">« La technologie au service d'un monde meilleur »</span>
-      </div>
-    </footer>
   </div>
 </template>

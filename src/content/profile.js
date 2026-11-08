@@ -3,9 +3,13 @@
  * Les textes acceptent le Markdown en ligne (**gras**, *italique*, `code`) et les formules $…$.
  */
 export const profile = {
-  name: 'Ousmane Ba',
+  name: 'Ousmane Ba', // nom affiché sur github.com/leonbathie
   initials: 'OB',
   handle: 'leonbathie',
+  /** Titre court, affiché sous le nom */
+  role: 'Ingénieur IA & Chercheur',
+  /** Photo du profil GitHub ; hors ligne, les formes affichent les initiales */
+  avatar: 'https://avatars.githubusercontent.com/u/188758078?v=4',
   city: 'Rufisque / Dakar',
   country: 'Sénégal',
   links: {

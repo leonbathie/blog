@@ -1,21 +1,28 @@
 /* =====================================================================
    Forme 6 — « LeonTechLab »
-   Portail rétro : terminal à phosphore vert, barre de navigation beige
-   biseautée des années 90, cadres néon et bandeau d'accueil en pixel art.
-   Portée depuis la maquette « LeonTechLab v1.0 ».
+   Console rétro : écran à phosphore vert encadré, barres d'état, menus
+   « >> », boutons « [ crochets ] », panneaux « :: Titre :: », titres cyan
+   et bandeau lunaire en pixel art. Police bitmap VT323 (terminal VGA),
+   Press Start 2P pour le titre.
    ===================================================================== */
 
 html[data-theme='leontechlab'] {
-  --leon-bg: 3 9 5;
-  --leon-panel: 6 17 9;
-  --leon-green: 34 255 85;
-  --leon-dim: 20 153 51;
-  --leon-dark: 11 59 23;
-  --leon-gold: 245 184 65;
-  --leon-bright: 255 212 102;
+  --leon-bg: 0 0 0;
+  --leon-panel: 1 6 1;
+  --leon-green: 51 255 51;
+  --leon-bright: 180 255 180;
+  --leon-dim: 34 170 34;
+  --leon-dark: 12 64 12;
+  --leon-gold: 255 210 30;
+  --leon-bright-gold: 255 236 140;
+  --leon-cyan: 80 240 255;
+  --leon-ink: 214 214 214;
+  --leon-red: 255 85 85;
+  --leon-magenta: 255 85 255;
   --leon-beige: 221 208 184;
   --leon-sand: 181 164 139;
-  --leon-ink: 234 234 234;
+  --leon-font: 'VT323', 'Lucida Console', 'Courier New', monospace;
+  --leon-pixel: 'Press Start 2P', 'VT323', monospace;
 
   color-scheme: dark;
   scroll-behavior: smooth;
@@ -24,13 +31,28 @@ html[data-theme='leontechlab'] {
 html[data-theme='leontechlab'] body {
   background-color: rgb(var(--leon-bg));
   color: rgb(var(--leon-ink));
-  font-family: 'IBM Plex Mono', monospace;
-  /* Trame de points + lignes de balayage, comme un tube cathodique */
-  background-image:
-    radial-gradient(rgb(var(--leon-green) / 0.05) 1px, transparent 0),
-    linear-gradient(to bottom, rgb(0 0 0 / 0.2) 50%, rgb(0 0 0 / 0.55) 50%);
-  background-size: 24px 24px, 100% 4px;
-  background-attachment: fixed;
+  font-family: var(--leon-font);
+  /* VT323 est dessinée petite : 18 px correspond à un texte de 16 px classique */
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.theme-leon {
+  position: relative;
+  font-family: var(--leon-font);
+  /* Police de terminal : pas de ligature « fi », chaque lettre dans sa case */
+  font-variant-ligatures: none;
+  overflow-x: clip;
+}
+
+/* Lignes de balayage du tube, par-dessus tout, sans gêner le pointeur */
+.theme-leon::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgb(0 0 0 / 0.16) 0 1px, transparent 1px 3px);
 }
 
 .theme-leon ::selection {
@@ -40,113 +62,278 @@ html[data-theme='leontechlab'] body {
 
 .theme-leon :is(button, a, input, select, textarea, summary):focus-visible {
   outline: 2px solid rgb(var(--leon-gold));
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
-/* ---------- Cadre néon ---------- */
-.leon-box {
-  background: linear-gradient(180deg, rgb(8 22 12 / 0.94) 0%, rgb(4 11 6 / 0.98) 100%);
-  border: 1.5px solid rgb(var(--leon-green));
+/* ---------- L'écran : cadre vert autour de toute la page ---------- */
+.leon-screen {
+  /* Au-delà de 1440 px, l'écran se centre : des lignes trop longues se lisent mal */
+  width: calc(100% - 12px);
+  max-width: 1440px;
+  margin: 6px auto;
+  min-height: calc(100vh - 12px);
+  min-height: calc(100dvh - 12px);
+  display: flex;
+  flex-direction: column;
+  border: 2px solid rgb(var(--leon-green));
   box-shadow:
-    0 0 8px rgb(var(--leon-green) / 0.18),
-    inset 0 0 12px rgb(var(--leon-green) / 0.06);
-}
-.leon-box-header {
-  border-bottom: 1.5px solid rgb(var(--leon-green));
-  padding-bottom: 4px;
-  margin-bottom: 10px;
-  color: rgb(var(--leon-green));
-  text-shadow: 0 0 6px rgb(var(--leon-green) / 0.45);
+    0 0 0 1px rgb(var(--leon-dark)),
+    0 0 28px rgb(var(--leon-green) / 0.14),
+    inset 0 0 60px rgb(var(--leon-green) / 0.035);
 }
 
-/* ---------- Titre en relief ---------- */
+/* ---------- Barres d'état (haut et bas) ---------- */
+.leon-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 2px 10px;
+  color: rgb(var(--leon-green));
+  border-bottom: 1px solid rgb(var(--leon-green));
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+.leon-status-bottom {
+  border-bottom: 0;
+  border-top: 1px solid rgb(var(--leon-green));
+}
+
+/* ---------- Bandeau ---------- */
+.leon-hero {
+  position: relative;
+  border-bottom: 1px solid rgb(var(--leon-green));
+  background: rgb(var(--leon-bg));
+}
+.leon-hero-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 .leon-title {
-  font-family: Silkscreen, 'Press Start 2P', monospace;
-  color: #fff3d1;
+  font-family: var(--leon-pixel);
+  color: rgb(var(--leon-gold));
   text-shadow:
-    2px 2px 0 #d9822b,
-    4px 4px 0 #7a3e0a,
-    0 0 18px rgb(var(--leon-gold) / 0.55);
+    3px 3px 0 #5a3d00,
+    0 0 18px rgb(var(--leon-gold) / 0.45);
   letter-spacing: 1px;
 }
+.leon-subtitle {
+  color: rgb(var(--leon-gold));
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 8px rgb(var(--leon-gold) / 0.4);
+}
 
-/* ---------- Barre de navigation beige, biseautée ---------- */
-.leon-navbar {
-  background: linear-gradient(180deg, #e8dec8 0%, #d2c2a8 50%, #c2b092 100%);
-  border-top: 2px solid #fff8eb;
-  border-left: 2px solid #fff8eb;
-  border-right: 2px solid #6e6049;
-  border-bottom: 2px solid #6e6049;
-  color: #1a1612;
-  box-shadow: 0 3px 10px rgb(0 0 0 / 0.65);
+/* ---------- Barre de navigation « [ crochets ] » ---------- */
+.leon-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 3px 8px;
+  border-bottom: 1px solid rgb(var(--leon-green));
+  background: rgb(var(--leon-bg));
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+.leon-nav::-webkit-scrollbar {
+  display: none;
 }
 .leon-nav-link {
-  padding: 0.25rem 0.7rem;
-  font-size: 0.78rem;
-  color: #1a1612;
-  border: 2px solid transparent;
-  transition: background-color 0.12s;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 4px;
+  color: rgb(var(--leon-green));
+  font-size: 1.15rem;
+  line-height: 1.2;
+  text-shadow: 0 0 6px rgb(var(--leon-green) / 0.35);
+  transition: background-color 0.1s, color 0.1s;
+}
+.leon-nav-link::before {
+  content: '[\00a0';
+}
+.leon-nav-link::after {
+  content: '\00a0]';
 }
 .leon-nav-link:hover {
-  background: #efe7d6;
+  color: rgb(var(--leon-bright));
+  background: rgb(var(--leon-green) / 0.12);
 }
-/* L'onglet courant est enfoncé : biseaux inversés, comme un bouton 90s */
-.leon-nav-link-on {
-  background: #c2b092;
-  border-top-color: #6e6049;
-  border-left-color: #6e6049;
-  border-right-color: #fff8eb;
-  border-bottom-color: #fff8eb;
-  font-weight: 700;
+/* L'onglet courant en vidéo inverse, comme un menu DOS */
+.leon-nav-link-on,
+.leon-nav-link-on:hover {
+  background: rgb(var(--leon-green));
+  color: rgb(var(--leon-bg));
+  text-shadow: none;
 }
 
-/* ---------- Champs et boutons ---------- */
-.leon-field {
-  width: 100%;
-  padding: 0.35rem 0.55rem;
-  background: rgb(var(--leon-bg));
-  border: 1px solid rgb(var(--leon-green) / 0.5);
+/* ---------- Panneaux « :: Titre :: » ---------- */
+.leon-panel {
+  border: 1px solid rgb(var(--leon-green));
+  background: rgb(var(--leon-panel));
+  box-shadow: inset 0 0 18px rgb(var(--leon-green) / 0.04);
+}
+.leon-panel-head {
+  margin: 3px;
+  padding: 1px 8px;
+  border: 1px solid rgb(var(--leon-green));
   color: rgb(var(--leon-green));
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.75rem;
+  font-size: 1.12rem;
+  line-height: 1.3;
+  text-shadow: 0 0 6px rgb(var(--leon-green) / 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.leon-field:focus {
-  outline: none;
-  border-color: rgb(var(--leon-gold));
+.leon-panel-head::before {
+  content: ':: ';
+}
+.leon-panel-head::after {
+  content: ' ::';
+}
+.leon-panel-head-wrap {
+  white-space: normal;
+}
+.leon-panel-body {
+  padding: 6px 10px 9px;
+}
+.leon-rule {
+  border-top: 1px solid rgb(var(--leon-green) / 0.4);
 }
 
+/* ---------- Menu « >> » ---------- */
+.leon-menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 1px 6px;
+  text-align: left;
+  color: rgb(var(--leon-green));
+  font-size: 1.12rem;
+  line-height: 1.3;
+  transition: background-color 0.1s;
+}
+.leon-menu-item::before {
+  content: '>>';
+  flex: none;
+  color: rgb(var(--leon-dim));
+}
+.leon-menu-item:hover {
+  background: rgb(var(--leon-green) / 0.12);
+  color: rgb(var(--leon-bright));
+}
+.leon-menu-item-on,
+.leon-menu-item-on:hover {
+  background: rgb(var(--leon-dark));
+  color: rgb(var(--leon-bright));
+}
+.leon-menu-item-on::before {
+  color: rgb(var(--leon-gold));
+}
+
+/* ---------- Boutons « [ crochets ] » ---------- */
 /* Spécificité normale, et non :where() : le preflight de Tailwind impose
    `button { font-family: inherit; font-size: 100% }` à 0,0,1. */
 .leon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.7rem;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.72rem;
+  padding: 1px 3px;
   color: rgb(var(--leon-green));
-  background: rgb(var(--leon-dark) / 0.6);
-  border: 1px solid rgb(var(--leon-green) / 0.5);
-  transition: background-color 0.12s, color 0.12s, border-color 0.12s;
+  background: transparent;
+  border: 1px solid transparent;
+  font-family: var(--leon-font);
+  font-size: 1.05rem;
+  line-height: 1.3;
+  white-space: nowrap;
+  transition: background-color 0.1s, color 0.1s;
+}
+.leon-btn::before {
+  content: '[\00a0';
+}
+.leon-btn::after {
+  content: '\00a0]';
 }
 .leon-btn:hover {
   background: rgb(var(--leon-green) / 0.14);
-  border-color: rgb(var(--leon-green));
+  color: rgb(var(--leon-bright));
 }
 .leon-btn-on,
 .leon-btn-on:hover {
-  color: rgb(var(--leon-bg));
   background: rgb(var(--leon-green));
-  border-color: rgb(var(--leon-green));
-  font-weight: 700;
+  color: rgb(var(--leon-bg));
 }
-.leon-btn-gold,
+/* Variante dorée encadrée (le « S'abonner » de la maquette) */
+.leon-btn-gold {
+  color: rgb(var(--leon-gold));
+  border-color: rgb(var(--leon-gold));
+  padding: 1px 10px;
+}
+.leon-btn-gold::before,
+.leon-btn-gold::after {
+  content: none;
+}
 .leon-btn-gold:hover {
-  color: #2a1a04;
   background: rgb(var(--leon-gold));
-  border-color: rgb(var(--leon-bright));
-  font-weight: 700;
+  color: #1a1200;
+}
+
+/* Variantes, posées APRÈS .leon-btn pour l'emporter à spécificité égale.
+   La feuille de la forme se charge après les utilitaires Tailwind : un
+   `text-left` ou un `px-2` placé à côté de .leon-btn serait ignoré. */
+.leon-btn-wrap {
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+.leon-btn-amber {
+  color: rgb(var(--leon-gold));
+}
+.leon-btn-amber:hover {
+  color: rgb(var(--leon-bright-gold));
+}
+.leon-btn-char {
+  padding: 1px 4px;
+  font-size: 1.3rem;
+  text-transform: none;
+}
+
+/* Panneau à marge intérieure : le bandeau-titre reste collé au cadre */
+.leon-panel-pad {
+  padding: 0 10px 10px;
+}
+.leon-panel-pad > .leon-panel-head {
+  margin: 3px -7px 8px;
+}
+
+/* Ligne de formulaire dans un menu : libellé et champ centrés */
+.leon-menu-form {
+  align-items: center;
+}
+
+/* ---------- Champs ---------- */
+.leon-field {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 6px;
+  background: rgb(var(--leon-bg));
+  border: 1px solid rgb(var(--leon-green) / 0.6);
+  color: rgb(var(--leon-green));
+  font-family: var(--leon-font);
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+.leon-field::placeholder {
+  color: rgb(var(--leon-dim));
+}
+.leon-field:focus {
+  outline: none;
+  border-color: rgb(var(--leon-gold));
 }
 
 /* Curseurs : rail fin, pastille carrée verte */
@@ -154,119 +341,286 @@ html[data-theme='leontechlab'] body {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 16px;
+  height: 22px;
   background: transparent;
   cursor: pointer;
 }
 .theme-leon input[type='range']::-webkit-slider-runnable-track {
   height: 2px;
-  background: rgb(var(--leon-green) / 0.35);
+  background: rgb(var(--leon-green) / 0.4);
 }
 .theme-leon input[type='range']::-moz-range-track {
   height: 2px;
-  background: rgb(var(--leon-green) / 0.35);
+  background: rgb(var(--leon-green) / 0.4);
 }
 .theme-leon input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 10px;
-  height: 10px;
-  margin-top: -4px;
+  width: 12px;
+  height: 12px;
+  margin-top: -5px;
   border-radius: 0;
   background: rgb(var(--leon-green));
   box-shadow: 0 0 8px rgb(var(--leon-green) / 0.8);
 }
 .theme-leon input[type='range']::-moz-range-thumb {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border: 0;
   border-radius: 0;
   background: rgb(var(--leon-green));
   box-shadow: 0 0 8px rgb(var(--leon-green) / 0.8);
 }
 
-/* ---------- Bandeau d'accueil ---------- */
-.leon-hero-canvas {
+/* ---------- Curseur clignotant ---------- */
+@keyframes leon-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.leon-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  vertical-align: -0.15em;
+  background: currentColor;
+  animation: leon-blink 1s steps(1) infinite;
+}
+
+/* ---------- Titres d'articles (cyan) ---------- */
+.leon-article-title {
+  color: rgb(var(--leon-cyan));
+  text-shadow: 0 0 8px rgb(var(--leon-cyan) / 0.35);
+  line-height: 1.15;
+}
+.leon-article-title:hover {
+  color: #c8fbff;
+}
+
+/* ---------- Vignette ---------- */
+.leon-thumb {
   display: block;
-  width: 100%;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  aspect-ratio: 960 / 260;
+  border: 1px solid rgb(var(--leon-green) / 0.6);
+  background: rgb(var(--leon-bg));
+  line-height: 0;
 }
 
 /* ---------- Ascenseur ---------- */
-.theme-leon ::-webkit-scrollbar { width: 10px; height: 10px; }
-.theme-leon ::-webkit-scrollbar-track { background: rgb(var(--leon-bg)); }
+.theme-leon ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.theme-leon ::-webkit-scrollbar-track {
+  background: rgb(var(--leon-bg));
+}
 .theme-leon ::-webkit-scrollbar-thumb {
   background: rgb(var(--leon-dark));
-  border: 1px solid rgb(var(--leon-green) / 0.4);
+  border: 1px solid rgb(var(--leon-green) / 0.5);
 }
 
 /* ---------- Corps des articles ---------- */
 .leon-prose {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.84rem;
-  line-height: 1.8;
-  color: rgb(var(--leon-ink) / 0.86);
+  font-size: 1.22rem;
+  line-height: 1.5;
+  color: rgb(var(--leon-ink) / 0.92);
   overflow-wrap: anywhere;
 }
-.leon-prose :is(pre, .katex, .katex-display) { overflow-wrap: normal; }
-.leon-prose > * + * { margin-top: 0.9rem; }
-.leon-prose :is(h2, h3, h4) {
-  font-family: Silkscreen, 'Press Start 2P', monospace;
-  color: rgb(var(--leon-gold));
-  line-height: 1.5;
-  margin-top: 1.7rem;
+.leon-prose :is(pre, .katex, .katex-display) {
+  overflow-wrap: normal;
 }
-.leon-prose h2 { font-size: 0.95rem; }
-.leon-prose h3 { font-size: 0.85rem; }
-.leon-prose h4 { font-size: 0.8rem; }
-.leon-prose strong { color: rgb(var(--leon-green)); }
-.leon-prose a {
+.leon-prose > * + * {
+  margin-top: 0.9rem;
+}
+.leon-prose :is(h2, h3, h4) {
   color: rgb(var(--leon-gold));
+  line-height: 1.25;
+  margin-top: 1.7rem;
+  text-shadow: 0 0 8px rgb(var(--leon-gold) / 0.3);
+}
+.leon-prose h2 {
+  font-size: 1.5rem;
+}
+.leon-prose h3 {
+  font-size: 1.35rem;
+}
+.leon-prose h4 {
+  font-size: 1.25rem;
+}
+.leon-prose :is(h2, h3, h4)::before {
+  color: rgb(var(--leon-green));
+  text-shadow: none;
+}
+.leon-prose h2::before {
+  content: '>> ';
+}
+.leon-prose :is(h3, h4)::before {
+  content: '> ';
+}
+.leon-prose strong {
+  color: rgb(var(--leon-green));
+  font-weight: 700;
+}
+.leon-prose em {
+  color: rgb(var(--leon-bright-gold));
+}
+.leon-prose a {
+  color: rgb(var(--leon-cyan));
   text-decoration: underline;
+  text-decoration-style: dotted;
   text-underline-offset: 3px;
 }
-.leon-prose ul { list-style: square; padding-left: 1.2rem; }
-.leon-prose ol { list-style: decimal; padding-left: 1.2rem; }
-.leon-prose blockquote {
-  border-left: 3px solid rgb(var(--leon-green));
-  padding-left: 0.9rem;
-  color: rgb(var(--leon-ink) / 0.7);
+.leon-prose a:hover {
+  color: #c8fbff;
 }
-.leon-prose :not(pre) > code {
-  font-size: 0.88em;
-  padding: 0.1em 0.3em;
-  background: rgb(var(--leon-dark) / 0.6);
-  border: 1px solid rgb(var(--leon-green) / 0.3);
+.leon-prose ul {
+  list-style: '» ';
+  padding-left: 1.4rem;
+}
+.leon-prose ol {
+  list-style: decimal;
+  padding-left: 1.6rem;
+}
+.leon-prose li::marker {
   color: rgb(var(--leon-green));
 }
+.leon-prose li + li {
+  margin-top: 0.25rem;
+}
+.leon-prose blockquote {
+  border-left: 3px solid rgb(var(--leon-gold));
+  padding-left: 0.9rem;
+  color: rgb(var(--leon-ink) / 0.75);
+  font-style: italic;
+}
+.leon-prose :not(pre) > code {
+  font-family: var(--leon-font);
+  font-size: 0.95em;
+  padding: 0 0.3em;
+  background: rgb(var(--leon-dark) / 0.55);
+  border: 1px solid rgb(var(--leon-green) / 0.3);
+  color: rgb(var(--leon-gold));
+}
 .leon-prose pre {
-  padding: 0.8rem;
+  padding: 0.7rem 0.9rem;
   background: rgb(var(--leon-bg));
-  border: 1px solid rgb(var(--leon-green) / 0.35);
-  font-size: 0.72rem;
-  line-height: 1.6;
+  border: 1px solid rgb(var(--leon-green) / 0.45);
+  color: rgb(var(--leon-green));
+  font-family: var(--leon-font);
+  font-size: 1.05rem;
+  line-height: 1.35;
   overflow-x: auto;
+}
+.leon-prose pre code {
+  font-family: inherit;
 }
 .leon-prose .math-block {
-  padding: 0.7rem 0.9rem;
-  background: rgb(var(--leon-dark) / 0.45);
-  border-left: 3px solid rgb(var(--leon-gold));
+  padding: 0.6rem 0.9rem;
+  border: 1px dashed rgb(var(--leon-green) / 0.45);
+  background: rgb(var(--leon-dark) / 0.25);
   overflow-x: auto;
 }
-.theme-leon .katex { font-size: 1em; text-transform: none; }
+.leon-prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 1.05rem;
+}
+.leon-prose :is(th, td) {
+  border: 1px solid rgb(var(--leon-green) / 0.4);
+  padding: 0.2rem 0.6rem;
+  text-align: left;
+}
+.leon-prose th {
+  color: rgb(var(--leon-gold));
+}
+.leon-prose img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid rgb(var(--leon-green) / 0.4);
+}
+.leon-prose hr {
+  border: 0;
+  border-top: 1px dashed rgb(var(--leon-green) / 0.5);
+}
+.theme-leon .katex {
+  font-size: 1.05em;
+  text-transform: none;
+}
 
-/* ---------- Mobile ---------- */
+/* ---------- Tablette et téléphone ---------- */
+@media (max-width: 1023px) {
+  /* La barre reste sous le doigt pendant qu'on lit */
+  .leon-nav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    box-shadow: 0 6px 14px rgb(0 0 0 / 0.6);
+    /* Fondu à droite : signale qu'il reste des onglets à faire défiler */
+    padding-right: 32px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+  }
+}
+
 @media (max-width: 639px) {
-  .leon-nav-link { padding: 0.45rem 0.6rem; }
-  .leon-btn { min-height: 2.4rem; }
-  html[data-theme='leontechlab'] body { background-attachment: scroll; }
+  html[data-theme='leontechlab'] body {
+    font-size: 17px;
+  }
+  .leon-screen {
+    width: calc(100% - 6px);
+    margin: 3px auto;
+    min-height: calc(100vh - 6px);
+    min-height: calc(100dvh - 6px);
+    border-width: 1px;
+  }
+  .leon-status {
+    padding: 2px 6px;
+    font-size: 1rem;
+  }
+  .leon-prose {
+    font-size: 1.18rem;
+  }
+  .leon-prose h2 {
+    font-size: 1.38rem;
+  }
+  .leon-prose h3 {
+    font-size: 1.28rem;
+  }
+}
+
+/* Cibles tactiles : au doigt, chaque commande fait au moins 40 px de haut */
+@media (pointer: coarse) {
+  .leon-nav-link,
+  .leon-menu-item,
+  .leon-btn {
+    min-height: 2.5rem;
+  }
+  .leon-field {
+    min-height: 2.5rem;
+  }
+  .theme-leon input[type='range'] {
+    height: 32px;
+  }
+  .theme-leon input[type='range']::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -8px;
+  }
+  .theme-leon input[type='range']::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 /* ---------- Mouvement réduit ---------- */
 @media (prefers-reduced-motion: reduce) {
-  html[data-theme='leontechlab'] { scroll-behavior: auto; }
+  html[data-theme='leontechlab'] {
+    scroll-behavior: auto;
+  }
+  .leon-cursor {
+    animation: none;
+  }
   .theme-leon *,
   .theme-leon *::before,
   .theme-leon *::after {

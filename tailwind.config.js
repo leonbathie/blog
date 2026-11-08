@@ -71,7 +71,7 @@ export default {
           faint: 'rgb(var(--term-faint) / <alpha-value>)',
           line: 'rgb(var(--term-line) / <alpha-value>)',
         },
-        // Forme « LeonTechLab » : terminal à phosphore vert, or et beige 90s
+        // Forme « LeonTechLab » : console à phosphore vert, or, cyan et palette ANSI
         leon: {
           bg: 'rgb(var(--leon-bg) / <alpha-value>)',
           panel: 'rgb(var(--leon-panel) / <alpha-value>)',
@@ -80,6 +80,10 @@ export default {
           dark: 'rgb(var(--leon-dark) / <alpha-value>)',
           gold: 'rgb(var(--leon-gold) / <alpha-value>)',
           bright: 'rgb(var(--leon-bright) / <alpha-value>)',
+          'bright-gold': 'rgb(var(--leon-bright-gold) / <alpha-value>)',
+          cyan: 'rgb(var(--leon-cyan) / <alpha-value>)',
+          red: 'rgb(var(--leon-red) / <alpha-value>)',
+          magenta: 'rgb(var(--leon-magenta) / <alpha-value>)',
           beige: 'rgb(var(--leon-beige) / <alpha-value>)',
           sand: 'rgb(var(--leon-sand) / <alpha-value>)',
           ink: 'rgb(var(--leon-ink) / <alpha-value>)',

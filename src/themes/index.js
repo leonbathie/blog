@@ -67,9 +67,8 @@ export const themes = [
     id: 'leontechlab',
     name: 'LeonTechLab',
     date: '2026-11',
-    summary: 'Portail rétro : terminal à phosphore vert, barre beige des années 90 et bandeau en pixel art.',
-    fonts:
-      'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&display=swap',
+    summary: 'Console rétro : écran à phosphore vert, menus « >> », bandeau lunaire en pixel art et titres cyan.',
+    fonts: 'https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap',
     integratedSwitcher: true,
     load: () => import('./leontechlab/Theme.vue'),
   },
