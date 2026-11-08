@@ -172,9 +172,7 @@ Profil, projets, dépôts et systèmes se modifient dans `src/content/profile.js
 
 ## Mise en ligne
 
-Le déploiement passe **uniquement par git + GitHub Actions** : un push sur `main`
-déclenche le workflow qui construit le site et envoie `dist/` sur le serveur.
-Aucune publication manuelle (pas de `scp`, pas de script lancé depuis le PC).
+Le blog est publié sur **GitHub Pages** par GitHub Actions. Un push sur `main` suffit :
 
 ```bash
 git add -A
@@ -182,6 +180,20 @@ git commit -m "Nouvelle forme : …"
 git push
 ```
 
-Procédure complète (clé SSH, secrets, Nginx, HTTPS) : **[deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md)**.
-Configuration Nginx prête à installer : [deploy/nginx.example.conf](deploy/nginx.example.conf).
-Workflows : [.github/workflows/](.github/workflows/).
+→ https://leonbathie.github.io/blog/
+
+Aucune publication manuelle, aucun secret à configurer. Le workflow est
+[.github/workflows/pages.yml](.github/workflows/pages.yml) ; il construit le site, désactive
+Jekyll et publie `dist/`. Réglage à faire une seule fois :
+*Settings → Pages → Build and deployment → **GitHub Actions***.
+
+Les adresses étant en mode hash (`/#/recherche/mon-article`), aucune règle de réécriture
+n'est nécessaire et les liens partagés restent valables.
+
+### Déployer sur un VPS à la place
+
+Possible à tout moment : [.github/workflows/deploy.yml](.github/workflows/deploy.yml) construit
+le site et l'envoie par `rsync`. Il est volontairement **manuel** (onglet Actions →
+« Run workflow ») pour ne pas entrer en concurrence avec Pages. Procédure complète (clé SSH,
+secrets, Nginx, HTTPS) : [deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md), avec une configuration
+Nginx prête à installer dans [deploy/nginx.example.conf](deploy/nginx.example.conf).

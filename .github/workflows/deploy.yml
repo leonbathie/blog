@@ -1,7 +1,12 @@
-name: Deploy to VPS
+name: Deploy to VPS (manuel)
 
-# Mise en ligne du blog : un push sur main construit le site et envoie dist/ sur le VPS.
-# Aucune publication manuelle — tout passe par ce workflow.
+# Déploiement alternatif vers un VPS, conservé mais NON automatique :
+# la mise en ligne courante passe par GitHub Pages (voir pages.yml).
+#
+# Ce workflow ne se déclenche donc qu'à la demande, depuis l'onglet Actions
+# (« Run workflow »), afin de ne pas échouer à chaque push faute de secrets.
+# Pour revenir au VPS en automatique : remettre le déclencheur `push` ci-dessous
+# et désactiver pages.yml.
 #
 # Secrets attendus (Settings → Secrets and variables → Actions) :
 #   VPS_HOST      hôte ou IP du serveur            (ex. 173.249.2.195)
@@ -12,8 +17,6 @@ name: Deploy to VPS
 #   RELOAD_NGINX  "true" pour recharger Nginx après l'envoi, optionnel
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -35,10 +38,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'

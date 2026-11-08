@@ -1,0 +1,76 @@
+name: Deploy to GitHub Pages
+
+# Mise en ligne du blog sur GitHub Pages.
+# Un push sur main construit le site et le publie ; aucun secret à configurer.
+# Source à régler une seule fois : Settings → Pages → Build and deployment → GitHub Actions.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write # publier sur Pages
+  id-token: write # exigé par actions/deploy-pages (OIDC)
+
+# Une seule publication à la fois, sans interrompre celle qui est en cours.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html || { echo "::error::dist/index.html manquant : le build a échoué."; exit 1; }
+          echo "Build OK — $(find dist -type f | wc -l) fichiers, $(du -sh dist | cut -f1)."
+
+      # Empêche GitHub de faire passer le site par Jekyll, qui ignorerait
+      # les fichiers et dossiers commençant par un underscore.
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      - name: Summary
+        run: |
+          echo "### Blog en ligne :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
