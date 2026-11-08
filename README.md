@@ -10,13 +10,14 @@ src/themes/       les « formes » du blog                  — une par apparenc
 src/core/         le socle partagé (Markdown+formules, formes, labos, audio, horloge)
 ```
 
-Trois formes existent aujourd'hui :
+Quatre formes existent aujourd'hui :
 
 | № | Forme               | Apparence                                                                     |
 |---|---------------------|-------------------------------------------------------------------------------|
 | 1 | `monographie`       | Carnet de recherche éditorial (papier / obsidienne), labo, mini-jeu 8-bit     |
 | 2 | `cyberdeck`         | Poste de pilotage spatial : noyau WebGL Three.js, labo cyber, arène           |
 | 3 | `planche`           | Planche de bureau d'études : papier millimétré, cartouche, tirage ou cyanotype |
+| 4 | `mission`           | Contrôle de mission : radar orbital, télémétrie, essaim MCP, terminal Ctrl+K  |
 
 Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
 `src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
@@ -140,7 +141,7 @@ export default {
 | `'rotate'`     | la forme **suivante** à chaque chargement de page ← réglage actuel     |
 | `'random'`     | une forme au hasard, jamais deux fois la même d'affilée               |
 | `'latest'`     | toujours la dernière du registre (ne change qu'en ajoutant une forme) |
-| `'<id>'`       | toujours cette forme, par exemple `'planche'`                         |
+| `'<id>'`       | toujours cette forme, par exemple `'mission'`                         |
 
 ---
 

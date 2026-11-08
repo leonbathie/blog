@@ -20,6 +20,9 @@ export default {
         archivo: ['Archivo', 'Helvetica Neue', 'sans-serif'],
         plex: ['"IBM Plex Sans"', 'sans-serif'],
         plexmono: ['"IBM Plex Mono"', 'monospace'],
+        orbitron: ['Orbitron', 'sans-serif'],
+        techmono: ['"Share Tech Mono"', 'monospace'],
+        grotesk: ['"Space Grotesk"', 'sans-serif'],
       },
       colors: {
         // Forme « Monographie » : couleurs pilotées par des variables CSS (papier clair / obsidienne)

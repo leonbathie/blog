@@ -43,4 +43,14 @@ export const themes = [
     integratedSwitcher: true,
     load: () => import('./planche/Theme.vue'),
   },
+  {
+    id: 'mission',
+    name: 'Mission Control',
+    date: '2026-11',
+    summary: 'Poste de contrôle de vol : radar orbital, télémétrie, essaim MCP et terminal de mission.',
+    fonts:
+      'https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=Space+Grotesk:wght@400;500;700&display=swap',
+    integratedSwitcher: true,
+    load: () => import('./mission/Theme.vue'),
+  },
 ]

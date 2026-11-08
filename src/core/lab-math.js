@@ -115,6 +115,38 @@ export function glitchOutcome({ offset, width, volt }) {
   return { inWindow, brownout, success: inWindow && volt >= 1.75 && !brownout }
 }
 
+/* =====================================================================
+   Module « pqc » — réseau euclidien Kyber / ML-KEM
+   ===================================================================== */
+
+/** Densité d'erreur gaussienne centrée, normalisée à 1 au sommet */
+export function latticeError(x, center, spread) {
+  return Math.exp(-Math.pow((x - center) / spread, 2))
+}
+
+/**
+ * Niveau de sécurité NIST atteint par la dimension du réseau.
+ * Kyber-512 → niveau 1, Kyber-768 → niveau 3, Kyber-1024 et au-delà → niveau 5.
+ */
+export function kyberLevel(n) {
+  if (n < 768) return { level: 1, bits: 128 }
+  if (n < 1024) return { level: 3, bits: 192 }
+  return { level: 5, bits: 256 }
+}
+
+/** Temps d'encapsulation, rapporté aux 0,14 ms mesurées sur Kyber-1024 */
+export const kyberTime = (n) => (n / 1024) * 0.14
+
+/**
+ * État du réseau en fonction du bruit σ. Un bruit trop faible laisse peu de marge
+ * contre les attaques par réseau ; un bruit trop fort fait échouer le déchiffrement.
+ */
+export function latticeStatus(sigma) {
+  if (sigma < 2.0) return { code: 'MARGE DE BRUIT FAIBLE', ok: false }
+  if (sigma > 4.6) return { code: 'ÉCHECS DE DÉCHIFFREMENT', ok: false }
+  return { code: 'OPTIMISÉ ML-KEM', ok: true }
+}
+
 /** Pipeline ASM affiché par le banc (ARM Cortex-M) */
 export const ASM_PIPELINE = [
   { addr: '0x08000140', op: 'BL', arg: 'verify_rsa_sig', tone: 'call' },
