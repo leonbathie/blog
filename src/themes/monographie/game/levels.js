@@ -137,7 +137,7 @@ export const LEVELS = [
     ground(30),
     ground(30),
     ground(30),
-  ], 'Touches ◀ ▶ pour courir, SAUT pour sauter.'),
+  ], 'Moitié gauche de l’écran : courir · moitié droite : sauter (ou les touches ◀ ▶ SAUT).'),
 
   build('02 — Baie de brassage', 'Maintenir Espace saute plus haut.', [
     NONE,
