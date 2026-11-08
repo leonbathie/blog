@@ -1,6 +1,7 @@
 <script setup>
 import { computed, inject, ref } from 'vue'
 import RichText from '../../../components/RichText.vue'
+import { BNE_WINDOW, CALIBRATION, glitchOutcome } from '../../../core/lab-math.js'
 
 /** Module 3.3 — Banc d'injection de fautes Faulty Cat (saut d'instruction BNE). */
 const mono = inject('mono')
@@ -9,9 +10,9 @@ const offset = ref(145)
 const width = ref(25)
 const volt = ref(1.65)
 
-const inWindow = computed(() => offset.value >= 175 && offset.value <= 205 && width.value >= 15 && width.value <= 40)
-const brownout = computed(() => volt.value > 2.35 || width.value > 60)
-const success = computed(() => inWindow.value && volt.value >= 1.75 && !brownout.value)
+const outcome = computed(() => glitchOutcome({ offset: offset.value, width: width.value, volt: volt.value }))
+const brownout = computed(() => outcome.value.brownout)
+const success = computed(() => outcome.value.success)
 
 const status = computed(() => {
   if (success.value) {
@@ -37,14 +38,14 @@ const status = computed(() => {
     badgeClass: 'border-zinc-500/30 bg-zinc-500/10 text-mono-muted',
     label: '[MANQUÉ]',
     labelClass: 'text-amber-500',
-    text: String.raw`Le glitch à $t=${offset.value}\text{ ns}$ est hors de la fenêtre critique de décodage $[175\text{–}205\text{ ns}]$ ou d'amplitude insuffisante. La signature RSA bloque l'exécution.`,
+    text: String.raw`Le glitch à $t=${offset.value}\text{ ns}$ est hors de la fenêtre critique de décodage $[${BNE_WINDOW.start}\text{–}${BNE_WINDOW.end}\text{ ns}]$ ou d'amplitude insuffisante. La signature RSA bloque l'exécution.`,
   }
 })
 
 function calibrate() {
-  offset.value = 190
-  width.value = 25
-  volt.value = 1.95
+  offset.value = CALIBRATION.offset
+  width.value = CALIBRATION.width
+  volt.value = CALIBRATION.volt
   mono.showToast("Paramètres Faulty Cat calibrés sur la fenêtre d'instruction BNE")
 }
 
@@ -63,8 +64,8 @@ const scope = computed(() => {
   return {
     path: `M ${PAD} ${Y_NOMINAL} L ${xStart} ${Y_NOMINAL} L ${xStart + 4} ${yDrop} L ${xEnd - 4} ${yDrop} L ${xEnd} ${Y_NOMINAL} L ${W - 15} ${Y_NOMINAL}`,
     color: success.value ? '#10B981' : brownout.value ? '#F43F5E' : '#38BDF8',
-    winStart: PAD + (175 / MAX_NS) * span,
-    winWidth: (35 / MAX_NS) * span,
+    winStart: PAD + (BNE_WINDOW.start / MAX_NS) * span,
+    winWidth: ((BNE_WINDOW.end - BNE_WINDOW.start) / MAX_NS) * span,
   }
 })
 </script>
@@ -129,7 +130,7 @@ const scope = computed(() => {
           </div>
           <svg viewBox="0 0 600 185" class="h-44 w-full overflow-visible" role="img" aria-label="Oscilloscope du rail d'alimentation">
             <rect :x="scope.winStart" y="15" :width="scope.winWidth" :height="H - 25" fill="rgba(217, 93, 57, 0.16)" stroke="#D95D39" stroke-dasharray="3,3" />
-            <text :x="scope.winStart - 10" y="12" class="fill-orange-300 font-mono text-[9px]">FENÊTRE BNE (175-210ns)</text>
+            <text :x="scope.winStart - 10" y="12" class="fill-orange-300 font-mono text-[9px]">FENÊTRE BNE ({{ BNE_WINDOW.start }}-{{ BNE_WINDOW.end }}ns)</text>
             <line :x1="PAD" :y1="Y_NOMINAL" :x2="W - 15" :y2="Y_NOMINAL" stroke="#27272a" stroke-dasharray="2,2" />
             <line :x1="PAD" y1="125" :x2="W - 15" y2="125" stroke="#7f1d1d" stroke-dasharray="4,4" />
             <text x="4" :y="Y_NOMINAL + 3" class="fill-zinc-400 font-mono text-[10px]">3.3V</text>

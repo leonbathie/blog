@@ -33,4 +33,14 @@ export const themes = [
     integratedSwitcher: true,
     load: () => import('./cyberdeck/Theme.vue'),
   },
+  {
+    id: 'planche',
+    name: 'Planche technique',
+    date: '2026-11',
+    summary: "Planche de bureau d'études : papier millimétré, cartouche et cotes, tirage papier ou cyanotype.",
+    fonts:
+      'https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap',
+    integratedSwitcher: true,
+    load: () => import('./planche/Theme.vue'),
+  },
 ]

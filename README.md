@@ -1,23 +1,27 @@
 # Blog de recherche — Ousmane Ba
 
 Blog de recherche et d'ingénierie, en **Vue 3 + Vite**, conçu autour d'une idée :
-le contenu est écrit une seule fois, et le blog **change de forme à chaque mise à jour**.
+le contenu est écrit une seule fois, et le blog **change de forme à chaque rafraîchissement
+de la page**.
 
 ```
 src/content/      le contenu (articles, projets, profil)  — écrit UNE fois
-src/themes/       les « formes » du blog                  — une nouvelle à chaque mise à jour
-src/core/         le socle partagé (Markdown+formules, formes, audio, horloge)
+src/themes/       les « formes » du blog                  — une par apparence
+src/core/         le socle partagé (Markdown+formules, formes, labos, audio, horloge)
 ```
 
-Deux formes existent aujourd'hui :
+Trois formes existent aujourd'hui :
 
-| № | Forme            | Apparence                                                                 |
-|---|------------------|---------------------------------------------------------------------------|
-| 1 | `monographie`    | Carnet de recherche éditorial (papier / obsidienne), labo, mini-jeu 8-bit |
-| 2 | `cyberdeck`      | Poste de pilotage spatial : noyau WebGL Three.js, labo cyber, arène       |
+| № | Forme               | Apparence                                                                     |
+|---|---------------------|-------------------------------------------------------------------------------|
+| 1 | `monographie`       | Carnet de recherche éditorial (papier / obsidienne), labo, mini-jeu 8-bit     |
+| 2 | `cyberdeck`         | Poste de pilotage spatial : noyau WebGL Three.js, labo cyber, arène           |
+| 3 | `planche`           | Planche de bureau d'études : papier millimétré, cartouche, tirage ou cyanotype |
 
-La forme affichée est la **dernière du registre** (`src/themes/index.js`). Les visiteurs
-peuvent revoir les précédentes via le sélecteur « Formes » en bas de page.
+Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
+`src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
+pour que les liens partagés restent fidèles ; le sélecteur « Formes » en bas de page
+permet aussi d'en choisir une.
 
 ## Démarrer
 
@@ -62,6 +66,11 @@ const route = useRoute()
 Chaque article expose : `slug`, `title`, `date`, `category`, `tag`, `abstract`,
 `metrics`, `readTime`, `bibtex`, `lab`, `html`.
 
+Les **simulateurs du laboratoire** suivent la même règle : leurs formules, seuils et jeux
+d'essai vivent dans `src/core/lab-math.js`, et chaque forme n'écrit que sa présentation
+(courbe, chronogramme, tableau…). Une correction de physique ou de linguistique se fait
+donc à un seul endroit et profite à toutes les formes.
+
 ### 3. Réagir à l'URL
 
 Les adresses sont **communes à toutes les formes**, donc un lien partagé reste valable
@@ -97,8 +106,8 @@ export const themes = [
 ]
 ```
 
-Être en dernier suffit : `site.config.js` est réglé sur `theme: 'latest'`, donc la nouvelle
-forme devient celle du site, et les anciennes restent consultables.
+Il suffit d'être dans le registre : `site.config.js` est réglé sur `theme: 'rotate'`, donc
+la nouvelle forme entre d'elle-même dans la rotation, à la suite des autres.
 
 ### 5. Vérifier
 
@@ -107,8 +116,8 @@ npm run build
 npm run preview
 ```
 
-- `http://localhost:4173/` → la nouvelle forme
-- `http://localhost:4173/?forme=monographie` → une forme précédente
+- `http://localhost:4173/` → une forme, puis la suivante à chaque rafraîchissement
+- `http://localhost:4173/?forme=ma-forme` → exactement cette forme
 
 > `integratedSwitcher: false` affiche automatiquement un sélecteur de formes en bas à
 > gauche. Mettez `true` seulement si votre `Theme.vue` propose déjà ses propres boutons
@@ -121,10 +130,17 @@ npm run preview
 ```js
 // src/site.config.js
 export default {
-  theme: 'latest',      // 'latest' = la dernière du registre · ou 'monographie', 'cyberdeck'…
-  themeArchive: true,   // false = plus de sélecteur ni de liens ?forme=
+  theme: 'rotate',      // voir le tableau ci-dessous
+  themeArchive: true,   // false = plus de sélecteur, ni de liens ?forme=, ni de rotation
 }
 ```
+
+| Réglage        | Effet                                                                 |
+|----------------|-----------------------------------------------------------------------|
+| `'rotate'`     | la forme **suivante** à chaque chargement de page ← réglage actuel     |
+| `'random'`     | une forme au hasard, jamais deux fois la même d'affilée               |
+| `'latest'`     | toujours la dernière du registre (ne change qu'en ajoutant une forme) |
+| `'<id>'`       | toujours cette forme, par exemple `'planche'`                         |
 
 ---
 

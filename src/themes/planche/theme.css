@@ -1,0 +1,394 @@
+/* =====================================================================
+   Forme 3 — « Planche »
+   Planche technique : papier millimétré, encre noire, filets durs, cartouche.
+   Mode sombre = cyanotype (bleu de plan, traits blancs), et non un simple
+   inversement de gris : c'est le couple historique tirage/calque.
+   ===================================================================== */
+
+html[data-theme='planche'] {
+  --pl-paper: 244 241 232;
+  --pl-ink: 22 23 26;
+  --pl-muted: 112 109 99;
+  --pl-rule: 22 23 26;
+  --pl-grid: 176 170 152;
+  --pl-blue: 29 63 115;
+  --pl-red: 176 42 42;
+  --pl-surface: 236 232 220;
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+html.dark[data-theme='planche'] {
+  --pl-paper: 11 36 61;
+  --pl-ink: 226 234 243;
+  --pl-muted: 139 169 198;
+  --pl-rule: 206 222 238;
+  --pl-grid: 44 82 122;
+  --pl-blue: 125 196 255;
+  --pl-red: 255 141 130;
+  --pl-surface: 9 29 50;
+  color-scheme: dark;
+}
+
+html[data-theme='planche'] body {
+  background-color: rgb(var(--pl-paper));
+  color: rgb(var(--pl-ink));
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.theme-planche ::selection {
+  background-color: rgb(var(--pl-blue) / 0.25);
+}
+
+.theme-planche :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid rgb(var(--pl-blue));
+  outline-offset: 2px;
+}
+
+/* ---------- Papier millimétré ----------
+   Deux trames superposées : le carreau de 8 px et la cote de 48 px. */
+.pl-paper-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgb(var(--pl-grid) / 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--pl-grid) / 0.55) 1px, transparent 1px),
+    linear-gradient(to right, rgb(var(--pl-grid) / 0.26) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--pl-grid) / 0.26) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px, 8px 8px, 8px 8px;
+  /* La trame s'efface vers le bas : la lecture prime sur le décor */
+  mask-image: linear-gradient(to bottom, #000 0, #000 55%, rgb(0 0 0 / 0.25) 100%);
+}
+
+/* ---------- Repères de coupe (coins de la planche) ---------- */
+.pl-crop {
+  position: fixed;
+  z-index: 45;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  opacity: 0.55;
+  border-color: rgb(var(--pl-rule));
+}
+
+/* ---------- Gabarit ---------- */
+.pl-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 640px) {
+  .pl-wrap { padding-inline: 2rem; }
+}
+
+/* ---------- Filets ----------
+   Le filet épais sépare les grandes parties, le filet fin les lignes d'un tableau. */
+.pl-rule-thick { border-top: 2px solid rgb(var(--pl-rule)); }
+.pl-rule-thin { border-top: 1px solid rgb(var(--pl-rule) / 0.35); }
+
+/* ---------- Métadonnées (cotes, repères, codes) ----------
+   Déclarée dans :where() — spécificité nulle — pour qu'une classe Tailwind
+   posée à côté (normal-case, tracking-normal, text-pl-blue…) l'emporte. */
+:where(.pl-meta) {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(var(--pl-muted));
+}
+
+/* ---------- Cartouche (bloc-titre du plan) ---------- */
+.pl-cartouche {
+  border: 2px solid rgb(var(--pl-rule));
+  background: rgb(var(--pl-paper) / 0.86);
+  backdrop-filter: blur(2px);
+}
+.pl-cell {
+  border-top: 1px solid rgb(var(--pl-rule) / 0.35);
+  padding: 0.6rem 0.85rem;
+}
+.pl-cell:first-child { border-top: 0; }
+.pl-cell-label {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(var(--pl-muted));
+}
+.pl-cell-value {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgb(var(--pl-ink));
+}
+
+/* ---------- Titre ---------- */
+.pl-display {
+  font-family: Archivo, 'Helvetica Neue', sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.6rem, 6.4vw, 5.2rem);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+.pl-lede {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: clamp(0.98rem, 1.2vw, 1.1rem);
+  line-height: 1.7;
+  max-width: 62ch;
+  color: rgb(var(--pl-muted));
+}
+
+/* ---------- Onglets de planche ---------- */
+.pl-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid rgb(var(--pl-rule) / 0.4);
+  border-bottom: 0;
+  margin-bottom: -1px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(var(--pl-muted));
+  background: transparent;
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+}
+.pl-tab:hover {
+  color: rgb(var(--pl-ink));
+  background: rgb(var(--pl-surface));
+}
+.pl-tab-on {
+  color: rgb(var(--pl-paper));
+  background: rgb(var(--pl-ink));
+  border-color: rgb(var(--pl-rule));
+}
+
+/* ---------- Boutons et champs ---------- */
+/* Spécificité normale, et non :where() : le preflight de Tailwind impose
+   `button { text-transform: none; font-family: inherit; font-size: 100% }`
+   à 0,0,1, ce qui écraserait une règle à spécificité nulle — les <a class="pl-btn">
+   resteraient stylés et les <button> non. */
+.pl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgb(var(--pl-rule) / 0.5);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--pl-ink));
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.pl-btn:hover {
+  border-color: rgb(var(--pl-rule));
+  background: rgb(var(--pl-surface));
+}
+.pl-btn-on {
+  color: rgb(var(--pl-paper));
+  background: rgb(var(--pl-ink));
+  border-color: rgb(var(--pl-rule));
+}
+/* Touches d'implosives : le caractère inséré est une minuscule, il doit s'afficher
+   tel quel — « Ɓ » pour un « ɓ » inséré serait un faux témoignage. */
+.pl-btn.pl-key {
+  text-transform: none;
+  font-size: 0.95rem;
+  letter-spacing: normal;
+}
+.pl-field {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgb(var(--pl-rule) / 0.4);
+  background: rgb(var(--pl-surface));
+  color: rgb(var(--pl-ink));
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+}
+.pl-field:focus {
+  outline: none;
+  border-color: rgb(var(--pl-blue));
+}
+
+/* Curseurs : trait fin et pastille carrée, pas de rail arrondi */
+.theme-planche input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.theme-planche input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: rgb(var(--pl-rule) / 0.4);
+}
+.theme-planche input[type='range']::-moz-range-track {
+  height: 2px;
+  background: rgb(var(--pl-rule) / 0.4);
+}
+.theme-planche input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -5px;
+  border-radius: 0;
+  background: rgb(var(--pl-ink));
+  border: 2px solid rgb(var(--pl-paper));
+  box-shadow: 0 0 0 1px rgb(var(--pl-rule));
+}
+.theme-planche input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: rgb(var(--pl-ink));
+  border: 2px solid rgb(var(--pl-paper));
+  box-shadow: 0 0 0 1px rgb(var(--pl-rule));
+}
+
+/* ---------- Fiches (articles, dépôts, systèmes) ---------- */
+.pl-sheet {
+  border: 1px solid rgb(var(--pl-rule) / 0.35);
+  background: rgb(var(--pl-paper) / 0.72);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.pl-sheet:hover {
+  border-color: rgb(var(--pl-rule));
+  background: rgb(var(--pl-surface));
+}
+.pl-sheet-on {
+  border-color: rgb(var(--pl-rule));
+  background: rgb(var(--pl-surface));
+  box-shadow: inset 3px 0 0 rgb(var(--pl-blue));
+}
+.pl-sheet-title {
+  font-family: Archivo, 'Helvetica Neue', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+  color: rgb(var(--pl-ink));
+}
+
+/* ---------- Calque de relevé ----------
+   Un calque que l'on rabat sur la planche : il révèle les annotations
+   de construction (repères, cotes, renvois) normalement masquées. */
+.pl-annot { display: none; }
+.pl-calque .pl-annot { display: block; }
+.pl-calque-film {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgb(var(--pl-red) / 0.07) 0,
+      rgb(var(--pl-red) / 0.07) 1px,
+      transparent 1px,
+      transparent 14px
+    );
+}
+.pl-mark {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(var(--pl-red));
+}
+
+/* ---------- Corps des articles (Markdown) ---------- */
+.pl-prose {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 0.97rem;
+  line-height: 1.78;
+  color: rgb(var(--pl-ink) / 0.88);
+  overflow-wrap: anywhere;
+}
+.pl-prose :is(pre, .katex, .katex-display) { overflow-wrap: normal; }
+.pl-prose > * + * { margin-top: 1rem; }
+.pl-prose :is(h2, h3, h4) {
+  font-family: Archivo, 'Helvetica Neue', sans-serif;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: rgb(var(--pl-ink));
+  margin-top: 1.9rem;
+}
+.pl-prose h2 {
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid rgb(var(--pl-rule));
+  padding-bottom: 0.35rem;
+}
+.pl-prose h3 { font-size: 1.08rem; }
+.pl-prose h4 { font-size: 0.98rem; }
+.pl-prose strong { color: rgb(var(--pl-ink)); font-weight: 600; }
+.pl-prose a {
+  color: rgb(var(--pl-blue));
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.pl-prose ul { list-style: square; padding-left: 1.2rem; }
+.pl-prose ol { list-style: decimal; padding-left: 1.2rem; }
+.pl-prose blockquote {
+  border-left: 3px solid rgb(var(--pl-blue));
+  padding-left: 1rem;
+  color: rgb(var(--pl-muted));
+}
+.pl-prose :not(pre) > code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85em;
+  padding: 0.1em 0.3em;
+  background: rgb(var(--pl-surface));
+  border: 1px solid rgb(var(--pl-rule) / 0.3);
+}
+.pl-prose pre {
+  padding: 0.9rem;
+  background: rgb(var(--pl-ink));
+  color: rgb(var(--pl-paper));
+  font: 0.74rem/1.6 'IBM Plex Mono', monospace;
+  overflow-x: auto;
+}
+.pl-prose .math-block {
+  padding: 0.7rem 0.9rem;
+  background: rgb(var(--pl-surface));
+  border-left: 3px solid rgb(var(--pl-rule));
+  overflow-x: auto;
+}
+.theme-planche .katex { font-size: 1.02em; }
+
+/* Les repères et cotes sont en capitales, mais une formule ne se met jamais
+   en capitales : « $\eta$ » deviendrait « H » et « $\beta$ » deviendrait « B ». */
+.theme-planche .katex { text-transform: none; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 767px) {
+  .pl-display { font-size: clamp(2.2rem, 11vw, 3.4rem); }
+  .pl-paper-grid { background-size: 32px 32px, 32px 32px, 8px 8px, 8px 8px; }
+}
+@media (max-width: 639px) {
+  .pl-crop { display: none; }
+  .pl-tab { min-height: 2.75rem; padding: 0.6rem 0.75rem; }
+  .pl-btn { min-height: 2.5rem; }
+}
+
+/* ---------- Mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme='planche'] { scroll-behavior: auto; }
+  .theme-planche * { transition-duration: 0.01ms !important; }
+}

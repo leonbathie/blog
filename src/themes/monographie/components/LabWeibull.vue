@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import RichText from '../../../components/RichText.vue'
+import { availability as availabilityOf, survival, weibullRegime } from '../../../core/lab-math.js'
 
 /** Module 3.1 — Loi de Weibull, disponibilité et survie à l'horizon de mission. */
 const eta = ref(140)
@@ -8,13 +9,9 @@ const beta = ref(1.0)
 const mttr = ref(4.5)
 const mission = ref(72)
 
-const regime = computed(() => {
-  if (beta.value < 0.95) return 'Jeunesse / Rodage'
-  if (beta.value > 1.15) return 'Usure Mécanique'
-  return 'Aléatoire (Constant)'
-})
-const availability = computed(() => (eta.value / (eta.value + mttr.value)) * 100)
-const reliability = computed(() => Math.exp(-Math.pow(mission.value / eta.value, beta.value)) * 100)
+const regime = computed(() => weibullRegime(beta.value))
+const availability = computed(() => availabilityOf(eta.value, mttr.value))
+const reliability = computed(() => survival(mission.value, eta.value, beta.value) * 100)
 
 function preset(scale, repair, horizon, shape) {
   eta.value = scale
@@ -34,7 +31,7 @@ const chart = computed(() => {
   let line = ''
   let area = `M ${PAD} ${H}`
   for (let t = 0; t <= MAX_T; t += 4) {
-    const r = Math.exp(-Math.pow(t / eta.value, beta.value))
+    const r = survival(t, eta.value, beta.value)
     const x = PAD + (t / MAX_T) * plotW
     const y = H - r * (H - 15)
     line += t === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`

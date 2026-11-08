@@ -17,6 +17,9 @@ export default {
         pixel: ['"Press Start 2P"', 'monospace'],
         syne: ['Syne', 'sans-serif'],
         jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+        archivo: ['Archivo', 'Helvetica Neue', 'sans-serif'],
+        plex: ['"IBM Plex Sans"', 'sans-serif'],
+        plexmono: ['"IBM Plex Mono"', 'monospace'],
       },
       colors: {
         // Forme « Monographie » : couleurs pilotées par des variables CSS (papier clair / obsidienne)
@@ -28,6 +31,17 @@ export default {
           accent: 'rgb(var(--mono-accent) / <alpha-value>)',
           panel: 'rgb(var(--mono-panel) / <alpha-value>)',
           surface: 'rgb(var(--mono-surface) / <alpha-value>)',
+        },
+        // Forme « Planche » : papier technique clair / cyanotype (bleu de plan) sombre
+        pl: {
+          paper: 'rgb(var(--pl-paper) / <alpha-value>)',
+          ink: 'rgb(var(--pl-ink) / <alpha-value>)',
+          muted: 'rgb(var(--pl-muted) / <alpha-value>)',
+          rule: 'rgb(var(--pl-rule) / <alpha-value>)',
+          grid: 'rgb(var(--pl-grid) / <alpha-value>)',
+          blue: 'rgb(var(--pl-blue) / <alpha-value>)',
+          red: 'rgb(var(--pl-red) / <alpha-value>)',
+          surface: 'rgb(var(--pl-surface) / <alpha-value>)',
         },
       },
     },

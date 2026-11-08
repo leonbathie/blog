@@ -2,54 +2,27 @@
 import { computed, inject, onMounted, ref, watch } from 'vue'
 import RichText from '../../../components/RichText.vue'
 import { tone } from '../../../core/audio.js'
+import {
+  compressionRate,
+  IMPLOSIVE_RE,
+  IMPLOSIVES as GLOTTALS,
+  morphTokens,
+  PULAAR_SAMPLES as SAMPLES,
+  splitWords,
+  standardTokens,
+} from '../../../core/lab-math.js'
 
 /** Module 3.2 — Tokenisation Pulaar/Wolof (BPE standard vs tokenizer morphologique) et spectrogramme. */
 const mono = inject('mono')
-
-const SAMPLES = [
-  { label: 'Exemple Pulaar 1', text: 'Ko ɓuri teeŋtude e ɗemngal Pulaar ko ɓamtaare jaŋde.' },
-  { label: 'Proverbe Pulaar', text: 'Ɓundu wooturu, ɓoggol gootol : ko dental woni doole.' },
-  { label: 'Exemple Wolof', text: 'Kuulal ak jàmm ci réewum Senegaal, nu jàng ci sunu làkk.' },
-]
-const GLOTTALS = ['ɓ', 'ɗ', 'ƴ', 'ŋ', 'ñ']
 
 const text = ref(SAMPLES[0].text)
 const input = ref(null)
 const canvas = ref(null)
 
-const words = computed(() => text.value.trim().split(/\s+/).filter(Boolean))
-
-// Whisper BPE « standard » : fragmente les mots contenant des implosives ou trop longs
-const stdTokens = computed(() => {
-  const tokens = []
-  for (const word of words.value) {
-    if (/[ɓɗƴŋñƁƊƳŊÑàé]/.test(word) || word.length > 5) {
-      for (let i = 0; i < word.length; i += 2) tokens.push(word.slice(i, i + 2))
-    } else {
-      tokens.push(word)
-    }
-  }
-  return tokens
-})
-
-// Tokenizer morphologique Pulaar-v3 : conserve les radicaux et les bigrammes implosifs
-const customTokens = computed(() => {
-  const tokens = []
-  for (const word of words.value) {
-    if (word.length > 7) {
-      const cut = Math.ceil(word.length * 0.6)
-      tokens.push(word.slice(0, cut), `##${word.slice(cut)}`)
-    } else {
-      tokens.push(word)
-    }
-  }
-  return tokens
-})
-
-const compression = computed(() => {
-  const std = stdTokens.value.length
-  return std ? Math.max(0, Math.round(((std - customTokens.value.length) / std) * 100)) : 0
-})
+const words = computed(() => splitWords(text.value))
+const stdTokens = computed(() => standardTokens(words.value))
+const customTokens = computed(() => morphTokens(words.value))
+const compression = computed(() => compressionRate(stdTokens.value, customTokens.value))
 
 function insertGlottal(char) {
   text.value += char
@@ -72,7 +45,7 @@ function drawSpectrogram() {
   const ch = h / rows
   for (let x = 0; x < cols; x++) {
     const code = seed.charCodeAt(x % n) || 65
-    const implosive = /[ɓɗƴŋƁƊƳŊ]/.test(seed[x % n] || '')
+    const implosive = IMPLOSIVE_RE.test(seed[x % n] || '')
     for (let y = 0; y < rows; y++) {
       const f = Math.sin(x * 0.25 + y * 0.3 + code * 0.1)
       let energy = (f + 1) * 0.45 * (1 - (y / rows) * 0.55)
@@ -87,7 +60,7 @@ function playPreview() {
   const value = text.value || 'Pulaar'
   for (let i = 0; i < Math.min(value.length, 14); i++) {
     const code = value.charCodeAt(i)
-    const implosive = /[ɓɗƴŋ]/.test(value[i])
+    const implosive = IMPLOSIVE_RE.test(value[i])
     tone({
       freq: 190 + (code % 18) * 22 + (implosive ? 160 : 0),
       type: implosive ? 'triangle' : 'sine',
