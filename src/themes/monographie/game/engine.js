@@ -64,15 +64,15 @@ function parseLevel(level) {
   let spawn = { x: 2 * TILE, y: 12 * TILE }
   let exit = { x: (LEVEL_W - 4) * TILE, y: 11 * TILE }
 
-  for (let y = 0; y < LEVEL_H; y++) {
+  for (let y = 0; y < tiles.length; y++) {
     for (let x = 0; x < LEVEL_W; x++) {
       const t = tiles[y][x]
       const px = x * TILE
       const py = y * TILE
       if (t === 'o') chips.push({ x: px + (TILE - CHIP_SIZE) / 2, y: py + (TILE - CHIP_SIZE) / 2, w: CHIP_SIZE, h: CHIP_SIZE, taken: false })
       else if (t === '^') spikes.push({ x: px + 2, y: py + TILE - SPIKE_H, w: TILE - 4, h: SPIKE_H })
-      else if (t === 'w' || t === 'r')
-        walkers.push({ x: px + 1, y: py + TILE - WALKER_H, w: WALKER_W, h: WALKER_H, vx: -(t === 'r' ? 1.15 : WALKER_SPEED), kind: t === 'r' ? 'runner' : 'guard', alive: true, home: px + 1 })
+      else if (t === 'w' || t === 'r' || t === 'm')
+        walkers.push({ x: px + 1, y: py + TILE - WALKER_H, w: WALKER_W, h: WALKER_H, vx: -(t === 'r' ? 1.15 : t === 'm' ? 0.4 : WALKER_SPEED), kind: t === 'r' ? 'runner' : t === 'm' ? 'monkey' : 'guard', alive: true, home: px + 1, throwCooldown: 105 + x * 3 })
       else if (t === 'g') gates.push({ x: px + 4, y: py + TILE - 24, w: 8, h: 24, offset: x * 11, active: (x * 11) % 180 < 90 })
       else if (t === 'S') spawn = { x: px, y: py + TILE - PLAYER_H }
       else if (t === 'E') exit = { x: px + 1, y: py + TILE - EXIT_H, w: EXIT_W, h: EXIT_H }
@@ -85,7 +85,7 @@ function parseLevel(level) {
 function tileAt(tiles, px, py) {
   const x = Math.floor(px / TILE)
   const y = Math.floor(py / TILE)
-  if (x < 0 || x >= LEVEL_W || y < 0 || y >= LEVEL_H) return x < 0 || x >= LEVEL_W ? SOLID : '.'
+  if (x < 0 || x >= LEVEL_W || y < 0 || y >= tiles.length) return x < 0 || x >= LEVEL_W ? SOLID : '.'
   return tiles[y][x]
 }
 
@@ -98,7 +98,7 @@ function hitsSolid(tiles, box) {
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       if (x < 0 || x >= LEVEL_W) return true // les bords du niveau font mur
-      if (y < 0 || y >= LEVEL_H) continue
+      if (y < 0 || y >= tiles.length) continue
       if (tiles[y][x] === SOLID) return true
     }
   }
@@ -110,6 +110,8 @@ export function createGame() {
     phase: 'title', // title | playing | dying | cleared | won | over
     levelIndex: 0,
     levelName: '',
+    adventure: null,
+    worldHeight: WORLD.h,
     hint: '',
     lives: START_LIVES,
     score: 0,
@@ -126,6 +128,7 @@ export function createGame() {
     chips: [],
     spikes: [],
     walkers: [],
+    bananas: [],
     gates: [],
     exit: { x: 0, y: 0, w: EXIT_W, h: EXIT_H },
     /** Événements du pas courant, lus puis vidés par la couche d'affichage (sons, confettis) */
@@ -144,11 +147,14 @@ export function createGame() {
     state.levelIndex = index
     state.levelFrames = 0
     state.levelName = level.name
+    state.adventure = level.adventure ?? null
+    state.worldHeight = level.grid.length * TILE
     state.hint = level.hint
     state.tiles = tiles
     state.chips = chips
     state.spikes = spikes
     state.walkers = walkers
+    state.bananas = []
     state.gates = gates
     state.exit = exit
     state.chipsTotal = chips.length
@@ -156,6 +162,8 @@ export function createGame() {
     state.combo = 0
     state.comboTimer = 0
     state.camera = 0
+    camera.x = 0
+    camera.y = Math.max(0, state.worldHeight - 180)
     Object.assign(state.player, { x: spawn.x, y: spawn.y, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0, groundTravel: 0, airJumpAvailable: false })
     coyote = 0
     buffer = 0
@@ -163,13 +171,14 @@ export function createGame() {
     wasJump = false
   }
 
-  function start() {
+  function start(index = 0) {
     state.phase = 'playing'
     state.lives = START_LIVES
     state.score = 0
     state.frames = 0
     state.message = ''
-    loadLevel(0)
+    const selected = Number.isInteger(index) && index >= 0 && index < LEVELS.length ? index : 0
+    loadLevel(selected)
     state.events.push({ type: 'start' })
   }
 
@@ -249,7 +258,7 @@ export function createGame() {
       const top = ty * TILE
       if (previousBottom > top || bottom < top) continue
       for (let tx = Math.floor(p.x / TILE); tx <= Math.floor((p.x + p.w - 1) / TILE); tx++) {
-        if (tx < 0 || tx >= LEVEL_W || ty < 0 || ty >= LEVEL_H) continue
+        if (tx < 0 || tx >= LEVEL_W || ty < 0 || ty >= state.tiles.length) continue
         if (state.tiles[ty][tx] === BRIDGE) {
           p.y = top - p.h
           return true
@@ -345,7 +354,7 @@ export function createGame() {
     p.anim += p.groundTravel
 
     /* ---- Chute hors du niveau ---- */
-    if (p.y > WORLD.h + 40) {
+    if (p.y > state.worldHeight + 40) {
       die()
       return state
     }
@@ -384,6 +393,17 @@ export function createGame() {
     /* ---- Patrouilleurs ---- */
     for (const w of state.walkers) {
       if (!w.alive) continue
+      if (w.kind === 'monkey' && --w.throwCooldown <= 0) {
+        // A slow, visible arc gives the player time to dodge or jump.
+        const dx = p.x - w.x
+        const dy = p.y - w.y
+        if (Math.abs(dx) < 190 && Math.abs(dy) < 100) {
+          const direction = dx < 0 ? -1 : 1
+          state.bananas.push({ x: w.x + w.w / 2, y: w.y - 4, w: 10, h: 8, vx: direction * 1.25, vy: -2.5, age: 0 })
+          state.events.push({ type: 'banana', x: w.x, y: w.y })
+          w.throwCooldown = 160
+        } else w.throwCooldown = 25
+      }
       const next = { ...w, x: w.x + w.vx }
       const aheadX = w.vx > 0 ? next.x + w.w + 1 : next.x - 1
       const under = tileAt(state.tiles, aheadX, w.y + w.h + 2)
@@ -408,6 +428,18 @@ export function createGame() {
       }
     }
 
+    for (const banana of state.bananas) {
+      banana.age += 1
+      banana.x += banana.vx
+      banana.y += banana.vy
+      banana.vy = Math.min(3, banana.vy + 0.05)
+      if (overlap(p, banana)) {
+        die()
+        return state
+      }
+    }
+    state.bananas = state.bananas.filter((banana) => banana.age < 150 && !hitsSolid(state.tiles, banana) && banana.y < state.worldHeight)
+
     /* ---- Terminal de sortie ---- */
     if (overlap(p, state.exit)) clearLevel()
 
@@ -427,7 +459,7 @@ export function createGame() {
     const p = state.player
     camera.x = Math.max(0, Math.min(WORLD.w - viewW, p.x + p.w / 2 - viewW / 2))
 
-    const maxY = Math.max(0, WORLD.h - viewH)
+    const maxY = Math.max(0, state.worldHeight - viewH)
     const focus = p.y + p.h / 2
     const dead = viewH * 0.18
     let top = camera.y
