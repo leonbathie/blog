@@ -22,8 +22,11 @@ Sept formes existent aujourd'hui :
 | 6 | `leontechlab`       | Console rétro bilingue FR/EN : bandeau lunaire en pixel art, invite de commande |
 | 7 | `evolution`         | Machine à remonter le Web : la même page de 1991 à 2050, dans le navigateur de chaque époque |
 
-Chaque chargement de page sert la **forme suivante** (`theme: 'rotate'` dans
-`src/site.config.js`). Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
+Chaque chargement choisit une forme **au hasard** (`theme: 'random'` dans
+`src/site.config.js`), sans répéter immédiatement la précédente. Les formes
+Monographie, LeonTechLab et Évolution ont chacune un poids de 5 contre 1 pour
+les autres : elles apparaissent donc plus souvent, sans exclure les autres formes.
+Un lien `?forme=<id>` affiche toujours exactement la forme demandée,
 pour que les liens partagés restent fidèles ; le sélecteur « Formes » en bas de page
 permet aussi d'en choisir une.
 
@@ -77,8 +80,9 @@ donc à un seul endroit et profite à toutes les formes.
 
 ### « Arcade 221 », le jeu de la forme Monographie
 
-Un vrai jeu de plateforme, terminable : quatre salles, trois vies, un terminal à
-atteindre dans chacune. Au clavier : flèches ou A/D, Espace, P (pause), R
+Un vrai jeu de plateforme, terminable : six salles, trois vies, un terminal à
+atteindre dans chacune. Les deux dernières ajoutent des robots rapides et des
+barrières électriques intermittentes. Au clavier : flèches ou A/D, Espace, P (pause), R
 (recommencer), F (plein écran). Au doigt, tout se joue sur l'image : la moitié
 gauche fait courir (vers le côté où l'on appuie, glisser fait demi-tour), la
 moitié droite fait sauter (maintenir saute plus haut) ; un appui sur un écran
@@ -163,8 +167,9 @@ export const themes = [
 ]
 ```
 
-Il suffit d'être dans le registre : `site.config.js` est réglé sur `theme: 'rotate'`, donc
-la nouvelle forme entre d'elle-même dans la rotation, à la suite des autres.
+Il suffit d'être dans le registre : avec `theme: 'random'`, la nouvelle forme
+participe automatiquement au tirage. Les poids des formes favorites sont définis
+dans `src/core/weightedTheme.js`.
 
 ### 5. Vérifier
 
@@ -173,7 +178,7 @@ npm run build
 npm run preview
 ```
 
-- `http://localhost:4173/` → une forme, puis la suivante à chaque rafraîchissement
+- `http://localhost:4173/` → une forme aléatoire à chaque rafraîchissement
 - `http://localhost:4173/?forme=ma-forme` → exactement cette forme
 
 > `integratedSwitcher: false` affiche automatiquement un sélecteur de formes en bas à
@@ -187,15 +192,15 @@ npm run preview
 ```js
 // src/site.config.js
 export default {
-  theme: 'rotate',      // voir le tableau ci-dessous
+  theme: 'random',      // voir le tableau ci-dessous
   themeArchive: true,   // false = plus de sélecteur, ni de liens ?forme=, ni de rotation
 }
 ```
 
 | Réglage        | Effet                                                                 |
 |----------------|-----------------------------------------------------------------------|
-| `'rotate'`     | la forme **suivante** à chaque chargement de page ← réglage actuel     |
-| `'random'`     | une forme au hasard, jamais deux fois la même d'affilée               |
+| `'rotate'`     | la forme **suivante** à chaque chargement de page                      |
+| `'random'`     | une forme au hasard avec favoris pondérés, jamais deux fois de suite ← réglage actuel |
 | `'latest'`     | toujours la dernière du registre (ne change qu'en ajoutant une forme) |
 | `'<id>'`       | toujours cette forme, par exemple `'mission'`                         |
 

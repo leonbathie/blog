@@ -8,7 +8,7 @@ import { readPref, writePref } from '../../../core/prefs.js'
 /**
  * « Arcade 221 » — le mini-jeu du labo de Dakar.
  *
- * Un vrai jeu de plateforme, jouable jusqu'au bout : quatre salles, trois vies,
+ * Un vrai jeu de plateforme, jouable jusqu'au bout : six salles, trois vies,
  * un terminal à atteindre dans chacune. Univers propre au blog (ingénieur,
  * puces de données, surtensions), pas le décalque d'un jeu existant.
  *
@@ -69,6 +69,7 @@ function sync() {
   view.chipsTotal = s.chipsTotal
   view.message = s.message
   view.frames = s.frames
+  view.levelFrames = s.levelFrames
   view.progress = s.exit.x > 0 ? Math.max(0, Math.min(1, s.player.x / s.exit.x)) : 0
 }
 
@@ -596,7 +597,7 @@ defineExpose({ start: restart })
 
           <p v-if="overlay === 'title'" class="max-w-md font-mono text-[11px] leading-relaxed text-zinc-300">
             Remettez le réseau sous tension : traversez les {{ LEVELS.length }} salles jusqu'au terminal.
-            Les puces de données rapportent des points, les surtensions coûtent une vie.
+            Les puces rapportent des points. Robots, surtensions et barrières électriques coûtent une vie.
           </p>
           <p v-else-if="overlay === 'won'" class="font-mono text-[11px] text-zinc-300">
             {{ LEVELS.length }} salles en {{ seconds }} s · score {{ view.score }} · record {{ best }}
@@ -615,7 +616,7 @@ defineExpose({ start: restart })
 
         <!-- Conseil de la salle, en jeu -->
         <p
-          v-else-if="view.phase === 'playing' && view.frames < 240"
+          v-else-if="view.phase === 'playing' && view.levelFrames < 240"
           class="pointer-events-none absolute inset-x-0 top-2 text-center font-mono text-[10px] text-amber-200/80"
         >
           {{ hintText }}

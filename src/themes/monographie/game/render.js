@@ -204,6 +204,31 @@ function spikes(ctx, state, cam, t) {
   }
 }
 
+// Electric barriers have a visible countdown before they turn back on.
+function gates(ctx, state, cam, t) {
+  for (const gate of state.gates) {
+    if (!visible(cam, gate.x, gate.w)) continue
+    const x = Math.round(gate.x)
+    const y = Math.round(gate.y)
+    const cycle = (state.frames + gate.offset) % 180
+    ctx.fillStyle = '#574162'
+    ctx.fillRect(x - 2, y + gate.h - 3, gate.w + 4, 3)
+    if (gate.active) {
+      ctx.fillStyle = 'rgba(244, 114, 182, 0.32)'
+      ctx.fillRect(x - 3, y, gate.w + 6, gate.h - 3)
+      ctx.fillStyle = '#f9a8d4'
+      for (let i = 0; i < gate.h - 3; i += 4) {
+        ctx.fillRect(x + ((i + Math.floor(t / 3)) % 5), y + i, 3, 4)
+      }
+      ctx.fillStyle = '#fff1f2'
+      ctx.fillRect(x + 3, y, 1, gate.h - 3)
+    } else {
+      ctx.fillStyle = cycle > 160 && Math.floor(t / 4) % 2 ? '#fb7185' : '#a78bfa'
+      ctx.fillRect(x + 2, y + gate.h - 5, 4, 2)
+    }
+  }
+}
+
 /**
  * Patrouilleur : petit robot de maintenance devenu hostile.
  * Châssis sombre cerclé de rouge, œil-scanner dans le sens de marche, bande
@@ -217,10 +242,12 @@ function walkers(ctx, state, cam, t) {
     const x = Math.round(w.x)
     const y = Math.round(w.y)
     const right = w.vx > 0
+    const runner = w.kind === 'runner'
+    const trim = runner ? '#c084fc' : C.walkerTrim
 
     // Antenne et témoin clignotant
     const blink = Math.floor(t / 10) % 2 === 0
-    ctx.fillStyle = C.walkerTrim
+    ctx.fillStyle = trim
     ctx.fillRect(x + (right ? 10 : 3), y - 3, 1, 3)
     if (blink) {
       ctx.fillStyle = C.walkerEye
@@ -228,10 +255,10 @@ function walkers(ctx, state, cam, t) {
     }
 
     // Châssis
-    ctx.fillStyle = C.walker
+    ctx.fillStyle = runner ? '#4c1d95' : C.walker
     ctx.fillRect(x, y, w.w, w.h - 3)
     // Cerclage clair sur le haut et les flancs : détache la masse du décor
-    ctx.fillStyle = C.walkerTrim
+    ctx.fillStyle = trim
     ctx.fillRect(x, y, w.w, 1)
     ctx.fillRect(x, y, 1, w.h - 3)
     ctx.fillRect(x + w.w - 1, y, 1, w.h - 3)
@@ -249,10 +276,18 @@ function walkers(ctx, state, cam, t) {
     ctx.fillStyle = '#fff7ed'
     ctx.fillRect(x + ex + (right ? 2 : 0), y + 4, 2, 1)
 
+    // Les robots rapides portent des oreilles et un eclair distinctifs.
+    if (runner) {
+      ctx.fillStyle = '#e9d5ff'
+      ctx.fillRect(x + 1, y - 2, 3, 2)
+      ctx.fillRect(x + w.w - 4, y - 2, 3, 2)
+      ctx.fillRect(x + 6, y + 5, 2, 3)
+    }
+
     // Chenilles : trois phases, le déplacement se voit même à l'arrêt visuel
     ctx.fillStyle = '#450a0a'
     ctx.fillRect(x, y + w.h - 3, w.w, 3)
-    ctx.fillStyle = C.walkerTrim
+    ctx.fillStyle = trim
     for (let i = roll; i < w.w; i += 3) ctx.fillRect(x + i, y + w.h - 2, 1, 1)
   }
 }
@@ -307,6 +342,12 @@ function player(ctx, state, scale = [1, 1]) {
     ctx.fillRect(x + 1, y + p.h, p.w - 2, 1)
   }
 
+  // Foulard anime et insigne du labo : une silhouette identifiable en mouvement.
+  ctx.fillStyle = '#facc15'
+  const scarf = p.onGround && !walking ? 0 : Math.floor(p.anim / 8) % 2
+  ctx.fillRect(x - 2 - scarf, y + 7, 5, 2)
+  ctx.fillRect(x - 3 - scarf, y + 8, 3, 2)
+
   // Sac dorsal, dessiné en premier : il passe derrière le corps
   ctx.fillStyle = C.pack
   ctx.fillRect(x - 1, y + 8, 3, 8)
@@ -345,6 +386,8 @@ function player(ctx, state, scale = [1, 1]) {
   ctx.fillRect(x + 4, y + 10, 4, 4)
   ctx.fillStyle = C.visor
   ctx.fillRect(x + 5, y + 11, 2, 1)
+  ctx.fillStyle = '#facc15'
+  ctx.fillRect(x + 5, y + 13, 2, 1)
 
   // Bras avant, qui balance avec la foulée
   ctx.fillStyle = C.suitDark
@@ -389,6 +432,7 @@ export function draw(ctx, state, cam, t, fx = null) {
   terrain(ctx, state, cam)
   chips(ctx, state, cam, t)
   spikes(ctx, state, cam, t)
+  gates(ctx, state, cam, t)
   walkers(ctx, state, cam, t)
   exitTerminal(ctx, state, cam, t)
   if (fx) fx.drawWorld(ctx)
