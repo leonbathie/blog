@@ -16,6 +16,19 @@ import { LEVEL_H, LEVEL_W, TILE } from './levels.js'
 export const VIEW_W = 320
 export const VIEW_H = 180
 
+// Assets are optional: a failed or still-loading image leaves the vector world playable.
+const artwork = {}
+function getArtwork(name, extension) {
+  if (typeof Image === 'undefined') return null
+  if (!artwork[name]) {
+    const img = new Image()
+    img.src = `${import.meta.env.BASE_URL}arcade/${name}.${extension}`
+    artwork[name] = img
+  }
+  const img = artwork[name]
+  return img.complete && img.naturalWidth > 0 ? img : null
+}
+
 const WORLD_W = LEVEL_W * TILE
 const GROUND_Y = (LEVEL_H - 3) * TILE // haut de la rangée de sol
 
@@ -92,6 +105,20 @@ function sky(ctx) {
 
 /** Étoiles et ville : plans lointains, dessinés en coordonnées écran */
 function parallax(ctx, cam) {
+  const village = getArtwork('village', 'png')
+  if (village) {
+    // A slow camera drift gives the illustrated village depth without a visible
+    // repeating seam. Keep the whole viewport covered even during jumps.
+    const height = VIEW_H + 24
+    const width = Math.max(VIEW_W + 70, height * village.naturalWidth / village.naturalHeight)
+    const travel = Math.max(0, width - VIEW_W)
+    const x = -Math.min(travel, cam.x / Math.max(1, WORLD_W - VIEW_W) * travel)
+    ctx.save()
+    ctx.imageSmoothingEnabled = true
+    ctx.drawImage(village, x, -12, width, height)
+    ctx.restore()
+    return
+  }
   // A warm distant sun gives the little world its own horizon.
   const sunX = Math.round(225 - cam.x * 0.025)
   const sunY = Math.round(56 - cam.y * 0.12)
@@ -146,28 +173,44 @@ function terrain(ctx, state, cam) {
       const y = ty * TILE
 
       if (t === '#') {
-        ctx.fillStyle = C.groundFill
+        // Sun-baked stone and patterned borders echo the village illustration.
+        ctx.fillStyle = (tx + ty) % 2 ? '#9a4a20' : '#ad5828'
         ctx.fillRect(x, y, TILE, TILE)
-        // Liseré lumineux seulement sur la face exposée
+        ctx.fillStyle = '#713017'
+        ctx.fillRect(x, y + 7, TILE, 1)
+        ctx.fillRect(x + ((ty % 2) ? 5 : 10), y + 1, 1, 6)
+        ctx.fillRect(x + ((ty % 2) ? 11 : 4), y + 8, 1, 8)
+        ctx.fillStyle = '#d78132'
+        ctx.fillRect(x + 1, y + 2, 3, 1)
+        ctx.fillRect(x + 8, y + 10, 4, 1)
         if (ty === 0 || state.tiles[ty - 1][tx] !== '#') {
-          ctx.fillStyle = C.groundTop
+          ctx.fillStyle = '#773319'
+          ctx.fillRect(x, y, TILE, 4)
+          ctx.fillStyle = '#f6b33c'
           ctx.fillRect(x, y, TILE, 2)
+          ctx.fillStyle = '#ffe08a'
+          ctx.fillRect(x + 1, y, TILE - 2, 1)
+          ctx.fillStyle = '#5e9c34'
+          if (tx % 3 === 0) ctx.fillRect(x + 2, y - 1, 7, 1)
         }
-        // Pistes de circuit imprimé, une tuile sur quatre : répétées partout,
-        // elles font vibrer le sol et fatiguent l'œil — d'autant plus depuis
-        // que l'image est agrandie davantage.
-        if ((tx * 2 + ty) % 4 === 0) {
-          ctx.fillStyle = C.trace
-          ctx.fillRect(x + 3, y + 6, TILE - 6, 1)
-          ctx.fillRect(x + 7, y + 6, 1, 5)
-          ctx.fillStyle = C.pad
-          ctx.fillRect(x + 6, y + 11, 3, 2)
+        if ((tx + ty * 3) % 5 === 0) {
+          ctx.fillStyle = '#f9bd4b'
+          ctx.fillRect(x + 6, y + 3, 4, 4)
+          ctx.fillStyle = '#8b3e20'
+          ctx.fillRect(x + 7, y + 4, 2, 2)
         }
       } else {
-        ctx.fillStyle = C.bridge
-        ctx.fillRect(x, y + 3, TILE, 5)
-        ctx.fillStyle = C.bridgeTop
+        // Patterned, solid-edged platform remains legible against the scenery.
+        ctx.fillStyle = '#773319'
+        ctx.fillRect(x, y + 2, TILE, 7)
+        ctx.fillStyle = '#f7b542'
         ctx.fillRect(x, y + 2, TILE, 2)
+        ctx.fillStyle = '#2d9c9d'
+        ctx.fillRect(x + 1, y + 4, 3, 2)
+        ctx.fillRect(x + 9, y + 4, 3, 2)
+        ctx.fillStyle = '#ffe087'
+        ctx.fillRect(x + 5, y + 4, 2, 2)
+        ctx.fillRect(x + 13, y + 4, 2, 2)
       }
     }
   }
@@ -269,6 +312,19 @@ function walkers(ctx, state, cam, t) {
     const y = Math.round(w.y)
     const right = w.vx > 0
     const runner = w.kind === 'runner'
+    const robot = getArtwork('robot', 'png')
+    if (robot) {
+      ctx.save()
+      ctx.imageSmoothingEnabled = true
+      ctx.translate(x + w.w / 2, y + w.h)
+      if (!right) ctx.scale(-1, 1)
+      const bounce = Math.sin(t / 7) * 0.5
+      const height = 22
+      const width = height * robot.naturalWidth / robot.naturalHeight
+      ctx.drawImage(robot, -width / 2, -height + bounce, width, height)
+      ctx.restore()
+      continue
+    }
     const trim = runner ? '#c084fc' : C.walkerTrim
 
     // Antenne et témoin clignotant
@@ -342,6 +398,24 @@ function player(ctx, state, scale = [1, 1], t = 0) {
   const p = state.player
   const x = Math.round(p.x)
   const y = Math.round(p.y)
+  const explorer = getArtwork('explorer', 'png')
+  if (explorer) {
+    const walking = p.onGround && Math.abs(p.vx) > 0.2
+    const bounce = walking ? Math.abs(Math.sin(p.anim / 6)) : 0
+    ctx.save()
+    ctx.imageSmoothingEnabled = true
+    ctx.translate(x + p.w / 2, y + p.h)
+    ctx.scale(scale[0] * (p.dir < 0 ? -1 : 1), scale[1])
+    // The scarf trails behind the body; align the body (not the whole PNG)
+    // with the collision box and retain the illustration's aspect ratio.
+    const height = 40
+    const width = height * explorer.naturalWidth / explorer.naturalHeight
+    const lean = walking ? Math.sin(p.anim / 6) * 0.025 : (!p.onGround ? -0.04 : 0)
+    ctx.rotate(lean)
+    ctx.drawImage(explorer, -width * 0.6, -height - bounce, width, height)
+    ctx.restore()
+    return
+  }
   const walking = p.onGround && Math.abs(p.vx) > 0.2
   const stride = walking ? Math.floor(p.anim / 6) % 2 : 0
   const airborne = !p.onGround

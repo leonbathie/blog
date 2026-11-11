@@ -24,6 +24,8 @@ const props = defineProps({ open: { type: Boolean, default: true } })
 const emit = defineEmits(['update:open'])
 const mono = inject('mono')
 
+const villageImage = `${import.meta.env.BASE_URL}arcade/village.png`
+const explorerImage = `${import.meta.env.BASE_URL}arcade/explorer.png`
 const canvas = ref(null)
 const stage = ref(null)
 const game = createGame()
@@ -35,6 +37,7 @@ const focused = ref(false)
 const fullscreen = ref(false)
 const canFullscreen = typeof document !== 'undefined' && Boolean(document.fullscreenEnabled)
 
+const CANVAS_SCALE = 3
 const STEP_MS = 1000 / 60
 const input = { left: false, right: false, jump: false }
 /* Un appui de saut, même plus bref qu'une image, doit donner un vrai saut : la
@@ -156,6 +159,7 @@ function render() {
   if (!el) return
   const ctx = el.getContext('2d')
   if (!ctx) return
+  ctx.setTransform(CANVAS_SCALE, 0, 0, CANVAS_SCALE, 0, 0)
   draw(ctx, game.state, game.cameraFor(VIEW_W, VIEW_H), frames, fx)
 }
 
@@ -528,7 +532,7 @@ defineExpose({ start: restart })
 <template>
   <details class="mono-arcade" :open="open" @toggle="emit('update:open', $event.target.open)">
     <summary>
-      <span class="mono-arcade-summary-title"><span class="mono-arcade-summary-icon" aria-hidden="true">✦</span> Une pause au laboratoire <strong>ARCADE 221</strong></span>
+      <span class="mono-arcade-summary-title"><span class="mono-arcade-summary-icon" aria-hidden="true">✦</span> Une aventure à Dakar <strong>ARCADE 221</strong></span>
       <span class="mono-arcade-summary-action">{{ open ? 'FERMER' : 'JOUER' }}</span>
     </summary>
 
@@ -539,7 +543,7 @@ defineExpose({ start: restart })
         role="status"
         aria-live="polite"
       >
-        <span class="mono-arcade-stat"><small>SALLE</small><b>{{ String(view.levelIndex + 1).padStart(2, '0') }}<i>/{{ LEVELS.length }}</i></b></span>
+        <span class="mono-arcade-stat"><small>MONDE</small><b>{{ String(view.levelIndex + 1).padStart(2, '0') }}<i>/{{ LEVELS.length }}</i></b></span>
         <span class="mono-arcade-stat"><small>VIES</small><b class="mono-arcade-hearts" :aria-label="`${view.lives} vies`">{{ '♥'.repeat(Math.max(0, view.lives)) || '—' }}</b></span>
         <span class="mono-arcade-stat"><small>PUCES</small><b>{{ chipsTaken }}<i>/{{ view.chipsTotal }}</i></b></span>
         <span class="mono-arcade-stat"><small>SCORE</small><b>{{ String(view.score).padStart(5, '0') }}</b></span>
@@ -577,8 +581,8 @@ defineExpose({ start: restart })
       <div class="mono-arcade-view relative">
         <canvas
           ref="canvas"
-          :width="VIEW_W"
-          :height="VIEW_H"
+          :width="VIEW_W * CANVAS_SCALE"
+          :height="VIEW_H * CANVAS_SCALE"
           class="mono-arcade-canvas block w-full"
           tabindex="0"
           role="application"
@@ -615,9 +619,9 @@ defineExpose({ start: restart })
         </div>
 
         <!-- Écrans : un appui n'importe où vaut le bouton principal -->
-        <div v-if="overlay" class="mono-arcade-overlay" :class="`mono-arcade-overlay-${overlay}`" @click="onOverlayTap">
+        <div v-if="overlay" class="mono-arcade-overlay" :class="`mono-arcade-overlay-${overlay}`" :style="{ '--arcade-village': `url('${villageImage}')`, '--arcade-explorer': `url('${explorerImage}')` }" @click="onOverlayTap">
           <div class="mono-arcade-overlay-content">
-            <p class="mono-arcade-eyebrow"><span aria-hidden="true">✦</span> LABO DE DAKAR <span aria-hidden="true">✦</span></p>
+            <p class="mono-arcade-eyebrow"><span aria-hidden="true">✦</span> UNE AVENTURE AU SÉNÉGAL <span aria-hidden="true">✦</span></p>
             <h3 class="mono-arcade-heading">
               <template v-if="overlay === 'title'">ARCADE <em>221</em></template>
               <template v-else-if="overlay === 'paused'">PETITE PAUSE</template>
@@ -626,7 +630,7 @@ defineExpose({ start: restart })
               <template v-else>À TOI DE <em>REJOUER !</em></template>
             </h3>
             <p v-if="overlay === 'title'" class="mono-arcade-description">
-              Six salles, des robots et un réseau à sauver. Prêt pour l'aventure ?
+              Saute, récolte les puces et traverse six mondes pleins de surprises !
             </p>
             <p v-else-if="overlay === 'cleared'" class="mono-arcade-description">{{ view.message }}</p>
             <p v-else-if="overlay === 'won'" class="mono-arcade-description">
@@ -636,7 +640,7 @@ defineExpose({ start: restart })
               Bien joué ! {{ view.score }} points · record {{ best }}. Une autre partie ?
             </p>
             <p v-else class="mono-arcade-description">{{ touchMode ? 'Touchez pour reprendre' : 'P ou Échap pour reprendre' }}</p>
-            <button type="button" class="mono-arcade-btn" @click="primary"><span aria-hidden="true">▶</span> {{ primaryLabel }}</button>
+            <button type="button" class="mono-arcade-btn" @click="primary"><span aria-hidden="true">▶</span> {{ overlay === 'title' ? 'C’est parti !' : primaryLabel }}</button>
             <p v-if="overlay === 'title'" class="mono-arcade-controls">{{ controlsText }}</p>
           </div>
         </div>
