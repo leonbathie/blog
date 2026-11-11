@@ -659,6 +659,8 @@ html.mono-turbo {
   text-transform: uppercase;
 }
 .mono-arcade-btn:hover { filter: brightness(1.12); }
+.mono-arcade-start-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .45rem; }
+.mono-arcade-monkey-btn { background: linear-gradient(#9de5ca, #55c29a); border-color: #c2f7df; box-shadow: 0 4px 0 #348b69; }
 .mono-arcade-pad { background: linear-gradient(#492314, #29170f); }
 .mono-arcade-key { color: #ffe5a0; background: #713719; border: 2px solid #d7892b; border-radius: 12px; box-shadow: 0 3px 0 #31170d; }
 .mono-arcade-key-jump { color: #54200c; background: #ffc44c; border-color: #ffe58b; }

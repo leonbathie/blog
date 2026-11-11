@@ -80,14 +80,16 @@ donc à un seul endroit et profite à toutes les formes.
 
 ### « Arcade 221 », le jeu de la forme Monographie
 
-Un vrai jeu de plateforme, terminable : six salles, trois vies, un terminal à
-atteindre dans chacune. Les deux dernières ajoutent des robots rapides et des
+Un vrai jeu de plateforme, terminable : huit salles, trois vies, un terminal à
+atteindre dans chacune. Les salles 5 et 6 ajoutent des robots rapides et des
 barrières électriques intermittentes. Au clavier : flèches ou A/D, Espace, P (pause), R
 (recommencer), F (plein écran). Au doigt, tout se joue sur l'image : la moitié
 gauche fait courir (vers le côté où l'on appuie, glisser fait demi-tour), la
 moitié droite fait sauter (maintenir saute plus haut). Une seconde pression en
 l'air déclenche un double saut ; les puces ramassées rapidement créent un combo
-de points jusqu'à ×5. Un appui sur un écran
+de points jusqu'à ×5. Deux ascensions dans un décor paradisiaque ajoutent des
+singes qui lancent des bananes ; le bouton « Aventure des singes » permet de
+les rejoindre directement depuis l'écran d'accueil. Un appui sur un écran
 de titre ou de pause le valide, et le tableau de bord a ses boutons pause et
 plein écran. Les touches ◀ ▶ SAUT restent sous l'image. Le téléphone vibre
 brièvement aux sauts, aux puces et aux chutes. Il vit dans

@@ -95,7 +95,7 @@ function block(...positions) {
  *                   à quelqu'un qui joue au doigt n'aide personne.
  */
 function build(name, hint, rows, hintTouch = null) {
-  if (rows.length !== LEVEL_H) throw new Error(`Niveau « ${name} » : ${rows.length} rangées au lieu de ${LEVEL_H}`)
+  if (rows.length < LEVEL_H) throw new Error(`Niveau « ${name} » : ${rows.length} rangées, minimum ${LEVEL_H}`)
   return { name, hint, hintTouch: hintTouch ?? hint, grid: rows }
 }
 
@@ -117,6 +117,30 @@ const [l4chipsLow, l4deckLow] = ledge(13, 38)
 
 const [l5chips, l5decks] = ledge(6, 25, 44)
 const [l6chips, l6decks] = ledge(13, 32, 52)
+
+// Une ascension en lacets : les plateformes se chevauchent et sont espacées
+// de trois tuiles. Le sol continu rattrape une chute et permet de réessayer.
+function skyAdventure(variant = 0) {
+  const rows = Array.from({ length: 35 }, () => NONE)
+  const xs = variant ? [22, 18, 14, 18, 22, 18, 14, 18, 22, 18] : [7, 11, 15, 11, 7, 11, 15, 11, 7, 11]
+  rows[31] = place({ [xs[0] + 1]: 'S' })
+  rows[32] = ground()
+  rows[33] = ground()
+  rows[34] = ground()
+  const decks = xs.map((x, i) => [29 - i * 3, x])
+  for (const [y, x] of decks) {
+    rows[y] = place({ [x]: '--------' })
+    rows[y - 1] = place({ [x + 3]: 'o' })
+  }
+  // Les singes restent sur leurs plateformes et annoncent leurs lancers.
+  for (const i of [1, 4, 7]) {
+    const [y, x] = decks[i]
+    rows[y - 1] = place({ [x + 2]: 'o', [x + 6]: 'm' })
+  }
+  rows[1] = place({ [xs[9] + 2]: 'E', [xs[9] + 5]: 'o' })
+  const name = variant ? '08 — Les cascades célestes' : '07 — Les jardins du ciel'
+  return { ...build(name, 'Grimpe de plateforme en plateforme ! Esquive les bananes et utilise ton double saut.', rows, 'Grimpe avec ◀ ▶ et SAUT ; esquive les bananes !'), adventure: 'sky' }
+}
 
 export const LEVELS = [
   build('01 — Mise sous tension', 'Flèches ou A/D pour courir · Espace deux fois pour un double saut.', [
@@ -218,6 +242,8 @@ export const LEVELS = [
     place({ 3: 'S', 10: 'r', 29: 'g', 38: 'r', 59: 'E' }),
     ground(21, 50), ground(21, 50), ground(21, 50),
   ]),
+  skyAdventure(),
+  skyAdventure(1),
 ]
 
 /**
@@ -228,8 +254,8 @@ export function validateLevels(levels = LEVELS) {
   const problems = []
 
   for (const level of levels) {
-    const row = level.grid[LEVEL_H - 4] // rangée des entités, juste au-dessus du sol
-    const floor = level.grid[LEVEL_H - 3]
+    const row = level.grid[level.grid.length - 4] // rangée des entités, juste au-dessus du sol
+    const floor = level.grid[level.grid.length - 3]
 
     /** Intervalles de tuiles occupés par un danger, rayon de patrouille compris */
     const hazards = []
@@ -263,7 +289,7 @@ export function validateLevels(levels = LEVELS) {
     // Rien de plein ne doit surplomber un danger : le joueur s'y cognerait en
     // plein saut et retomberait dedans. Un saut monte d'environ 4 tuiles, d'où
     // le couloir vérifié ici. Les passerelles, elles, se traversent par en bas.
-    const CEILING_ROWS = [LEVEL_H - 8, LEVEL_H - 4] // rangées 9 à 13
+    const CEILING_ROWS = [level.grid.length - 8, level.grid.length - 4] // rangées 9 à 13
     for (const zone of [...hazards, ...pits]) {
       for (let x = Math.max(0, zone.a - 2); x <= Math.min(LEVEL_W - 1, zone.b + 4); x++) {
         for (let y = CEILING_ROWS[0]; y <= CEILING_ROWS[1]; y++) {

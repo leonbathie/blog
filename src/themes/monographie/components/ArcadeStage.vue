@@ -1,14 +1,14 @@
 <script setup>
 import { computed, inject, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { createGame, SCORE } from '../game/engine.js'
-import { LEVELS } from '../game/levels.js'
+import { LEVELS, TILE } from '../game/levels.js'
 import { createEffects, draw, VIEW_H, VIEW_W } from '../game/render.js'
 import { readPref, writePref } from '../../../core/prefs.js'
 
 /**
  * « Arcade 221 » — le mini-jeu du labo de Dakar.
  *
- * Un vrai jeu de plateforme, jouable jusqu'au bout : six salles, trois vies,
+ * Un vrai jeu de plateforme, jouable jusqu'au bout : plusieurs salles, trois vies,
  * un terminal à atteindre dans chacune. Univers propre au blog (ingénieur,
  * puces de données, surtensions), pas le décalque d'un jeu existant.
  *
@@ -66,6 +66,7 @@ let raf = 0
 let last = 0
 let acc = 0
 let frames = 0
+let adventureStart = 0
 
 /* ---------- Synchronisation de l'état lisible par le gabarit ---------- */
 function sync() {
@@ -82,7 +83,12 @@ function sync() {
   view.frames = s.frames
   view.levelFrames = s.levelFrames
   view.combo = s.combo || 0
-  view.progress = s.exit.x > 0 ? Math.max(0, Math.min(1, s.player.x / s.exit.x)) : 0
+  if (s.adventure === 'sky') {
+    const startY = s.worldHeight - 3 * TILE - s.player.h
+    view.progress = Math.max(0, Math.min(1, (startY - s.player.y) / Math.max(1, startY - s.exit.y)))
+  } else {
+    view.progress = s.exit.x > 0 ? Math.max(0, Math.min(1, s.player.x / s.exit.x)) : 0
+  }
 }
 
 /* Les consignes doivent parler des commandes dont le visiteur dispose :
@@ -233,7 +239,8 @@ function primary() {
   if (phase === 'cleared') game.nextLevel()
   else if (phase === 'title' || phase === 'over' || phase === 'won') {
     rememberBest()
-    game.start()
+    if (phase === 'title') adventureStart = 0
+    game.start(adventureStart)
   }
   sync()
   focusCanvas()
@@ -246,7 +253,15 @@ const primaryLabel = computed(() => {
 
 function restart() {
   rememberBest()
-  game.start()
+  game.start(adventureStart)
+  sync()
+  focusCanvas()
+}
+
+function startMonkeyAdventure() {
+  rememberBest()
+  adventureStart = 6
+  game.start(adventureStart)
   sync()
   focusCanvas()
 }
@@ -630,7 +645,7 @@ defineExpose({ start: restart })
               <template v-else>À TOI DE <em>REJOUER !</em></template>
             </h3>
             <p v-if="overlay === 'title'" class="mono-arcade-description">
-              Saute, récolte les puces et traverse six mondes pleins de surprises !
+              Saute, récolte les puces et traverse {{ LEVELS.length }} mondes pleins de surprises !
             </p>
             <p v-else-if="overlay === 'cleared'" class="mono-arcade-description">{{ view.message }}</p>
             <p v-else-if="overlay === 'won'" class="mono-arcade-description">
@@ -640,7 +655,10 @@ defineExpose({ start: restart })
               Bien joué ! {{ view.score }} points · record {{ best }}. Une autre partie ?
             </p>
             <p v-else class="mono-arcade-description">{{ touchMode ? 'Touchez pour reprendre' : 'P ou Échap pour reprendre' }}</p>
-            <button type="button" class="mono-arcade-btn" @click="primary"><span aria-hidden="true">▶</span> {{ overlay === 'title' ? 'C’est parti !' : primaryLabel }}</button>
+            <div class="mono-arcade-start-actions">
+              <button type="button" class="mono-arcade-btn" @click="primary"><span aria-hidden="true">▶</span> {{ overlay === 'title' ? 'C’est parti !' : primaryLabel }}</button>
+              <button v-if="overlay === 'title' && LEVELS.length > 6" type="button" class="mono-arcade-btn mono-arcade-monkey-btn" @click="startMonkeyAdventure">🐒 Aventure des singes</button>
+            </div>
             <p v-if="overlay === 'title'" class="mono-arcade-controls">{{ controlsText }}</p>
           </div>
         </div>

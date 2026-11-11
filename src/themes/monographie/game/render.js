@@ -158,12 +158,75 @@ function parallax(ctx, cam) {
   }
 }
 
+/** A separate, illustrated sky world: the existing village stays untouched. */
+function paradise(ctx, state, cam, t) {
+  const art = getArtwork('paradise', 'png')
+  if (art) {
+    // Cover the viewport at every height, with a restrained vertical drift.
+    const height = VIEW_H + 60
+    const width = Math.max(VIEW_W + 40, height * art.naturalWidth / art.naturalHeight)
+    const progress = Math.max(0, Math.min(1, cam.y / Math.max(1, state.worldHeight - VIEW_H)))
+    const travel = width - VIEW_W
+    const x = -Math.max(0, Math.min(travel, travel / 2 + (cam.x - (WORLD_W - VIEW_W) / 2) * 0.08))
+    ctx.save()
+    ctx.imageSmoothingEnabled = true
+    // The second ascent explores the same landscape from the opposite side.
+    if (state.levelIndex === 7) {
+      ctx.translate(VIEW_W, 0)
+      ctx.scale(-1, 1)
+    }
+    ctx.drawImage(art, x, -8 - progress * 44, width, height)
+    ctx.restore()
+    if (state.levelIndex === 7) {
+      ctx.fillStyle = 'rgba(28, 123, 157, 0.09)'
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+    }
+  } else {
+    const gradient = ctx.createLinearGradient(0, 0, 0, VIEW_H)
+    gradient.addColorStop(0, '#246b9c')
+    gradient.addColorStop(0.55, '#7bd8d1')
+    gradient.addColorStop(1, '#f9dba3')
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H)
+  }
+
+  // Small drifting clouds, birds and floating petals breathe without hiding play.
+  ctx.save()
+  for (let i = 0; i < 5; i++) {
+    const x = ((i * 83 + t * (0.035 + i * 0.006)) % 400) - 40
+    const y = 14 + (i * 31) % 132 + Math.sin(t / 70 + i) * 2
+    ctx.fillStyle = 'rgba(255, 252, 227, 0.18)'
+    ctx.beginPath()
+    ctx.ellipse(x, y, 15 + i % 3 * 4, 3, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.strokeStyle = 'rgba(41, 72, 73, 0.65)'
+  ctx.lineWidth = 1
+  for (let i = 0; i < 4; i++) {
+    const x = ((i * 91 + t * (0.12 + i * 0.01)) % 360) - 20
+    const y = 18 + (i * 37) % 82 + Math.sin(t / 18 + i) * 2
+    const wing = 1 + Math.sin(t / 6 + i) * 2
+    ctx.beginPath()
+    ctx.moveTo(x - 4, y - wing)
+    ctx.lineTo(x, y)
+    ctx.lineTo(x + 4, y - wing)
+    ctx.stroke()
+  }
+  for (let i = 0; i < 12; i++) {
+    const x = ((i * 67 + Math.sin(t / 45 + i) * 7 + 340) % 340)
+    const y = ((i * 31 + t * (0.12 + (i % 3) * 0.035)) % 190) - 5
+    ctx.fillStyle = i % 2 ? 'rgba(255, 236, 161, 0.7)' : 'rgba(255, 182, 182, 0.65)'
+    ctx.fillRect(Math.round(x), Math.round(y), 2, 1)
+  }
+  ctx.restore()
+}
+
 /** Sol et passerelles */
 function terrain(ctx, state, cam) {
   const first = Math.max(0, Math.floor(cam.x / TILE) - 1)
   const last = Math.min(LEVEL_W - 1, Math.ceil((cam.x + VIEW_W) / TILE) + 1)
   const topRow = Math.max(0, Math.floor(cam.y / TILE) - 1)
-  const bottomRow = Math.min(LEVEL_H - 1, Math.ceil((cam.y + VIEW_H) / TILE) + 1)
+  const bottomRow = Math.min(state.tiles.length - 1, Math.ceil((cam.y + VIEW_H) / TILE) + 1)
 
   for (let ty = topRow; ty <= bottomRow; ty++) {
     for (let tx = first; tx <= last; tx++) {
@@ -201,9 +264,9 @@ function terrain(ctx, state, cam) {
         }
       } else {
         // Patterned, solid-edged platform remains legible against the scenery.
-        ctx.fillStyle = '#773319'
+        ctx.fillStyle = state.adventure === 'sky' ? '#284c39' : '#773319'
         ctx.fillRect(x, y + 2, TILE, 7)
-        ctx.fillStyle = '#f7b542'
+        ctx.fillStyle = state.adventure === 'sky' ? '#ecce72' : '#f7b542'
         ctx.fillRect(x, y + 2, TILE, 2)
         ctx.fillStyle = '#2d9c9d'
         ctx.fillRect(x + 1, y + 4, 3, 2)
@@ -311,6 +374,10 @@ function walkers(ctx, state, cam, t) {
     const x = Math.round(w.x)
     const y = Math.round(w.y)
     const right = w.vx > 0
+    if (w.kind === 'monkey') {
+      drawMonkey(ctx, w, t, state.player)
+      continue
+    }
     const runner = w.kind === 'runner'
     const robot = getArtwork('robot', 'png')
     if (robot) {
@@ -371,6 +438,91 @@ function walkers(ctx, state, cam, t) {
     ctx.fillRect(x, y + w.h - 3, w.w, 3)
     ctx.fillStyle = trim
     for (let i = roll; i < w.w; i += 3) ctx.fillRect(x + i, y + w.h - 2, 1, 1)
+  }
+}
+
+/** Expressive monkey silhouettes sit within their physical collision box. */
+function drawMonkey(ctx, w, t, player) {
+  const x = Math.round(w.x + w.w / 2)
+  const y = Math.round(w.y + w.h)
+  const flip = w.vx < 0 ? -1 : 1
+  const sway = Math.sin(t / 10 + w.home / 20)
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(flip, 1)
+  ctx.lineCap = 'round'
+  // A curved, moving tail makes them recognisable against the foliage.
+  ctx.strokeStyle = '#542637'
+  ctx.lineWidth = 2.5
+  ctx.beginPath()
+  ctx.moveTo(-4, -5)
+  ctx.bezierCurveTo(-10, -2, -12, -9 - sway, -8, -11 - sway)
+  ctx.stroke()
+  ctx.fillStyle = '#71333b'
+  ctx.beginPath()
+  ctx.ellipse(0, -5, 5.2, 5, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#bd7652'
+  ctx.beginPath()
+  ctx.ellipse(1, -5, 2.6, 3, 0, 0, Math.PI * 2)
+  ctx.fill()
+  // Feet and a waving arm show the attack even at the game's small scale.
+  ctx.strokeStyle = '#512334'
+  ctx.lineWidth = 2.5
+  ctx.beginPath()
+  ctx.moveTo(-2, -2); ctx.lineTo(-4 + sway, -0.5)
+  ctx.moveTo(2, -2); ctx.lineTo(4 - sway, -0.5)
+  ctx.moveTo(3, -7); ctx.lineTo(6, -9 + sway)
+  ctx.stroke()
+  ctx.fillStyle = '#71333b'
+  ctx.beginPath()
+  ctx.arc(-4, -12, 2.5, 0, Math.PI * 2)
+  ctx.arc(4, -12, 2.5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(0, -12, 5.3, 4.8, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#e8ae78'
+  ctx.beginPath()
+  ctx.ellipse(1, -11, 3.5, 2.6, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#2b1e27'
+  ctx.fillRect(1, -13, 1, 1)
+  ctx.fillRect(4, -12, 1, 1)
+  ctx.fillStyle = '#fff3d0'
+  ctx.fillRect(1, -13, 1, 1)
+  ctx.restore()
+  if (w.throwCooldown <= 30 && Math.abs(player.x - w.x) < 190 && Math.abs(player.y - w.y) < 100) {
+    // A high-contrast warning precedes the projectile for roughly half a second.
+    ctx.fillStyle = '#56282a'
+    ctx.fillRect(x - 3, y - 24, 7, 9)
+    ctx.fillStyle = Math.floor(t / 5) % 2 ? '#fff7cb' : '#ffd143'
+    ctx.fillRect(x - 2, y - 23, 5, 7)
+    ctx.fillStyle = '#793327'
+    ctx.fillRect(x, y - 22, 1, 3)
+    ctx.fillRect(x, y - 18, 1, 1)
+  }
+}
+
+function bananas(ctx, state, cam, t) {
+  for (const banana of state.bananas || []) {
+    if (!visible(cam, banana.x, banana.w) || banana.y + banana.h < cam.y - 10 || banana.y > cam.y + VIEW_H + 10) continue
+    ctx.save()
+    ctx.translate(Math.round(banana.x + banana.w / 2), Math.round(banana.y + banana.h / 2))
+    ctx.rotate(Math.sin(t / 8 + banana.x / 30) * 0.25)
+    // Dark outline and bright yellow shape are visible against sky and leaves.
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = '#623c18'
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    ctx.moveTo(-4, -2); ctx.quadraticCurveTo(-1, 5, 4, -1)
+    ctx.stroke()
+    ctx.strokeStyle = '#ffe053'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.fillStyle = '#fff6ad'
+    ctx.fillRect(-2, 1, 3, 1)
+    ctx.restore()
   }
 }
 
@@ -537,7 +689,8 @@ export function draw(ctx, state, cam, t, fx = null) {
   const [sx, sy] = fx ? fx.offset(t) : [0, 0]
   ctx.save()
   ctx.translate(sx, sy)
-  parallax(ctx, cam)
+  if (state.adventure === 'sky') paradise(ctx, state, cam, t)
+  else parallax(ctx, cam)
   drawExitGuide(ctx, state, cam, t)
 
   ctx.save()
@@ -547,6 +700,7 @@ export function draw(ctx, state, cam, t, fx = null) {
   spikes(ctx, state, cam, t)
   gates(ctx, state, cam, t)
   walkers(ctx, state, cam, t)
+  bananas(ctx, state, cam, t)
   exitTerminal(ctx, state, cam, t)
   if (fx) fx.drawWorld(ctx)
   player(ctx, state, fx ? fx.scale() : [1, 1], t)
@@ -669,6 +823,16 @@ export function createEffects() {
 /** Faisceau au-dessus du terminal, et flèche au bord quand il est hors champ */
 export function drawExitGuide(ctx, state, cam, t) {
   const e = state.exit
+  if (state.adventure === 'sky' && e.y + e.h < cam.y) {
+    // Point towards the summit even when the exit is far above the camera.
+    const x = Math.round(Math.max(14, Math.min(VIEW_W - 14, e.x + e.w / 2 - cam.x)))
+    ctx.fillStyle = 'rgba(38, 52, 45, 0.72)'
+    ctx.fillRect(x - 10, 5, 20, 17)
+    ctx.fillStyle = '#fff2aa'
+    for (let i = 0; i < 5; i++) ctx.fillRect(x - i, 8 + i, i * 2 + 1, 1)
+    ctx.fillRect(x - 1, 12, 3, 6)
+    return
+  }
   const beamX = Math.round(e.x + e.w / 2 - cam.x)
   if (beamX > -8 && beamX < VIEW_W + 8) {
     const top = Math.round(e.y - cam.y)
