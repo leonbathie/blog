@@ -29,6 +29,9 @@ const JUMP_CUT = 0.4 // relâcher tôt coupe l'élan
 const COYOTE = 6 // on peut encore sauter 6 pas après avoir quitté le sol
 const BUFFER = 6 // un saut demandé 6 pas trop tôt est mémorisé
 const STOMP_BOUNCE = -5.6
+const AIR_JUMP_V = -7.2
+const COMBO_DURATION = 4 * STEP_HZ
+const MAX_COMBO = 5
 const WALKER_SPEED = 0.7
 /** Un patrouilleur garde son poste : il ne s'éloigne pas de plus de 3 tuiles */
 const WALKER_RANGE = 3 * 16
@@ -114,9 +117,11 @@ export function createGame() {
     levelFrames: 0,
     chipsLeft: 0,
     chipsTotal: 0,
+    combo: 0,
+    comboTimer: 0,
     camera: 0,
     message: '',
-    player: { x: 0, y: 0, w: PLAYER_W, h: PLAYER_H, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0 },
+    player: { x: 0, y: 0, w: PLAYER_W, h: PLAYER_H, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0, airJumpAvailable: false },
     tiles: [],
     chips: [],
     spikes: [],
@@ -148,8 +153,10 @@ export function createGame() {
     state.exit = exit
     state.chipsTotal = chips.length
     state.chipsLeft = chips.length
+    state.combo = 0
+    state.comboTimer = 0
     state.camera = 0
-    Object.assign(state.player, { x: spawn.x, y: spawn.y, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0 })
+    Object.assign(state.player, { x: spawn.x, y: spawn.y, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0, airJumpAvailable: false })
     coyote = 0
     buffer = 0
     holdTimer = 0
@@ -265,6 +272,7 @@ export function createGame() {
 
     state.frames += 1
     state.levelFrames += 1
+    if (state.comboTimer > 0 && --state.comboTimer === 0) state.combo = 0
     const p = state.player
 
     /* ---- Déplacement horizontal ---- */
@@ -288,6 +296,13 @@ export function createGame() {
       coyote = 0
       holdTimer = 12
       state.events.push({ type: 'jump', x: p.x + p.w / 2, y: p.y + p.h })
+    } else if (buffer > 0 && p.airJumpAvailable) {
+      // Press again in the air for a second jump; works with touch or keyboard.
+      p.vy = AIR_JUMP_V
+      p.airJumpAvailable = false
+      buffer = 0
+      holdTimer = 12
+      state.events.push({ type: 'airJump', x: p.x + p.w / 2, y: p.y + p.h })
     }
     // Relâcher tôt écourte le saut
     if (holdTimer > 0) {
@@ -315,6 +330,7 @@ export function createGame() {
       p.vy = 0
       p.onGround = true
     }
+    if (p.onGround) p.airJumpAvailable = true
     if (wasOnGround && !p.onGround && p.vy >= 0) coyote = COYOTE
     // Atterrissage : poussière et tassement, proportionnels à la vitesse de chute
     if (!wasOnGround && p.onGround) state.events.push({ type: 'land', x: p.x + p.w / 2, y: p.y + p.h, speed: fallSpeed })
@@ -332,8 +348,13 @@ export function createGame() {
       if (chip.taken || !overlap(p, chip)) continue
       chip.taken = true
       state.chipsLeft -= 1
-      state.score += SCORE.chip
-      state.events.push({ type: 'chip', x: chip.x + chip.w / 2, y: chip.y + chip.h / 2 })
+      // Collect chips within four seconds to increase their value.
+      state.combo = Math.min(MAX_COMBO, state.combo + 1)
+      state.comboTimer = COMBO_DURATION
+      const points = SCORE.chip * state.combo
+      state.score += points
+      state.events.push({ type: 'chip', x: chip.x + chip.w / 2, y: chip.y + chip.h / 2, combo: state.combo, points })
+      if (state.combo > 1) state.events.push({ type: 'combo', x: chip.x + chip.w / 2, y: chip.y, combo: state.combo, points })
     }
 
     /* ---- Surtensions ---- */

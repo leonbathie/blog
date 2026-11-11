@@ -289,6 +289,105 @@ html.mono-turbo {
   background: #7c2d12;
 }
 
+/* Arcade 221 : une petite borne colorée au cœur du laboratoire. */
+.mono-arcade {
+  border-color: #55472c;
+  border-radius: 14px;
+  background: #101712;
+  box-shadow: 0 14px 40px rgb(0 0 0 / 0.15);
+}
+.mono-arcade summary {
+  min-height: 4rem;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  color: #b9c6bc;
+}
+.mono-arcade summary::after { content: none; }
+.mono-arcade-summary-title { display: flex; align-items: center; flex-wrap: wrap; gap: 0.65rem; }
+.mono-arcade-summary-title strong { color: #ffd16a; letter-spacing: 0.12em; }
+.mono-arcade-summary-icon { color: #ffb947; font-size: 1.2rem; }
+.mono-arcade-summary-action {
+  flex: none;
+  padding: 0.45rem 0.65rem;
+  color: #ffce72;
+  border: 1px solid #755929;
+  border-radius: 4px;
+  font-size: 0.6rem;
+}
+.mono-arcade summary:hover .mono-arcade-summary-action { background: #49391e; }
+.mono-arcade-hud {
+  justify-content: flex-start;
+  gap: 0.55rem clamp(0.8rem, 2vw, 2rem);
+  min-height: 3.5rem;
+  padding: 0.55rem 0.9rem 0.65rem;
+  background: #15141d;
+  border-color: #88622b;
+}
+.mono-arcade-stat { display: flex; flex-direction: column; gap: 0.3rem; white-space: nowrap; }
+.mono-arcade-stat small { color: #aa9b88; font: 0.52rem 'JetBrains Mono', monospace; letter-spacing: 0.1em; }
+.mono-arcade-stat b { color: #fff2d3; font: 0.65rem 'Press Start 2P', monospace; }
+.mono-arcade-stat i { color: #a89f91; font-style: normal; }
+.mono-arcade-stat .mono-arcade-hearts { color: #ff7183; letter-spacing: 0.1em; }
+.mono-arcade-combo { padding: 0.35rem 0.5rem; color: #241533; background: #edb9ff; border-radius: 3px; font-size: 0.56rem; }
+.mono-arcade-hud-btn { min-width: 2.4rem; min-height: 2.2rem; color: #ffe4a0; }
+.mono-arcade-progress { height: 3px; }
+.mono-arcade-progress-bar { background: linear-gradient(90deg, #f09936, #ffdc70, #8ff1d3); }
+.mono-arcade-view { container-type: inline-size; overflow: hidden; }
+.mono-arcade-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  overflow: auto;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 45%, rgb(42 30 68 / 91%), rgb(13 14 25 / 96%));
+}
+.mono-arcade-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  pointer-events: none;
+  border: 1px solid rgb(255 210 114 / 22%);
+  background-image: radial-gradient(#ffdc86 1px, transparent 1px), radial-gradient(#a2e9de 1px, transparent 1px);
+  background-size: 97px 73px, 137px 101px;
+  background-position: 15px 8px, 43px 38px;
+}
+.mono-arcade-overlay-content { position: relative; display: grid; justify-items: center; gap: clamp(0.4rem, 1.3cqw, 1rem); max-width: 42rem; }
+.mono-arcade-eyebrow { margin: 0; color: #8debd9; font: 0.7rem 'JetBrains Mono', monospace; letter-spacing: 0.22em; }
+.mono-arcade-heading { margin: 0; color: #fff3db; font: clamp(1.25rem, 4.5cqw, 3.5rem)/1.25 'Press Start 2P', monospace; text-shadow: 3px 4px 0 #713f52; }
+.mono-arcade-heading em { color: #ffc75f; font-style: normal; }
+.mono-arcade-description { max-width: 34rem; margin: 0; color: #d6d3d8; font: clamp(0.72rem, 1.45cqw, 1rem)/1.5 'JetBrains Mono', monospace; }
+.mono-arcade-controls { max-width: 36rem; margin: 0; color: #b5b2c3; font: clamp(0.6rem, 1.15cqw, 0.8rem)/1.5 'JetBrains Mono', monospace; }
+.mono-arcade-btn {
+  padding: 0.85rem 1.3rem;
+  color: #2a1930;
+  background: #ffc65e;
+  border: 2px solid #ffe5a0;
+  border-radius: 4px;
+  box-shadow: 0 4px 0 #a65b38, 0 8px 22px rgb(255 182 70 / 20%);
+}
+.mono-arcade-btn span { margin-right: 0.3rem; }
+.mono-arcade-btn:focus-visible, .mono-arcade-hud-btn:focus-visible, .mono-arcade-key:focus-visible, .mono-arcade summary:focus-visible { outline: 3px solid #8debd9; outline-offset: 3px; }
+.mono-arcade-pad { background: #15141d; }
+.mono-arcade-key { border-radius: 6px; }
+@container (max-width: 520px) {
+  .mono-arcade-overlay { padding: 0.4rem; }
+  .mono-arcade-overlay::before { inset: 3%; }
+  .mono-arcade-overlay-content { gap: 0.3rem; }
+  .mono-arcade-eyebrow { font-size: 0.48rem; }
+  .mono-arcade-heading { font-size: clamp(0.8rem, 4.2cqw, 1.3rem); }
+  .mono-arcade-description, .mono-arcade-controls { font-size: 0.58rem; line-height: 1.25; }
+  .mono-arcade-btn { padding: 0.45rem 0.65rem; font-size: 0.55rem; }
+}
+@media (max-width: 639px) {
+  .mono-arcade summary { padding: 0.7rem; font-size: 0.6rem; }
+  .mono-arcade-hud { gap: 0.5rem 0.8rem; padding: 0.5rem; }
+  .mono-arcade-stat small { font-size: 0.46rem; }
+  .mono-arcade-stat b { font-size: 0.52rem; }
+  .mono-arcade-record { display: none; }
+}
+
 /* ---------- Cartes « puces de données » (chiffres clés) ---------- */
 .mono-chip-card {
   border: 1px solid rgb(var(--mono-line));
