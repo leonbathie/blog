@@ -549,3 +549,135 @@ html.mono-turbo {
 @media (max-width: 360px) {
   .mono-nav { grid-template-columns: 1fr; }
 }
+
+/* Arcade 221 : une aventure chaleureuse, inspirée des couleurs du village. */
+.mono-arcade {
+  border: 2px solid #a6531b;
+  border-radius: 18px;
+  background: #28150f;
+  box-shadow: 0 18px 45px rgb(17 8 3 / 30%), inset 0 1px #f9b647;
+}
+.mono-arcade summary {
+  position: relative;
+  min-height: 4.4rem;
+  padding: 1rem 1.3rem;
+  color: #ffdfaa;
+  background: linear-gradient(115deg, #35180f, #5b2812 56%, #32190f);
+  border-bottom: 3px solid #e08a20;
+}
+.mono-arcade summary::before,
+.mono-arcade-hud::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 5px;
+  background: repeating-linear-gradient(135deg, #fbbd38 0 5px, #a83c17 5px 10px, #13a6a3 10px 15px, #51200e 15px 20px);
+  pointer-events: none;
+}
+.mono-arcade-summary-title { letter-spacing: .1em; }
+.mono-arcade-summary-title strong { color: #ffcc48; text-shadow: 0 2px #71350e; }
+.mono-arcade-summary-icon { color: #ffcf46; text-shadow: 0 0 12px #ff8c1a; }
+.mono-arcade-summary-action {
+  padding: .5rem .8rem;
+  color: #41200b;
+  background: #ffc84c;
+  border: 1px solid #ffdf82;
+  border-radius: 999px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 #9c4b0c;
+}
+.mono-arcade summary:hover .mono-arcade-summary-action { background: #ffe078; }
+.mono-arcade-hud {
+  gap: .6rem clamp(.8rem, 2vw, 2rem);
+  padding: .85rem 1.2rem .7rem;
+  background: linear-gradient(100deg, #29170f, #392014 55%, #211b1a);
+  border-bottom: 3px solid #bf681a;
+  box-shadow: inset 0 -1px #ffc954;
+}
+.mono-arcade-stat { gap: .25rem; }
+.mono-arcade-stat small { color: #ffc85c; font-weight: 700; letter-spacing: .07em; }
+.mono-arcade-stat b { color: #fff5da; text-shadow: 0 2px #5f2b12; }
+.mono-arcade-stat i { color: #d3b794; }
+.mono-arcade-stat .mono-arcade-hearts { color: #ff6b65; }
+.mono-arcade-combo { color: #38200b; background: #ffce49; border: 1px solid #fff1aa; border-radius: 999px; }
+.mono-arcade-hud-btn {
+  min-width: 2.6rem; min-height: 2.5rem;
+  color: #ffdc79; background: #533016;
+  border: 2px solid #d68b27; border-radius: 9px;
+}
+.mono-arcade-hud-btn:hover { background: #8a4717; }
+.mono-arcade-progress { height: 4px; background: #61351b; }
+.mono-arcade-progress-bar { background: linear-gradient(90deg, #ff9d21, #ffe06c, #26d9ba); box-shadow: 0 0 8px #ffd864; }
+.mono-arcade-canvas { background: #f5a944; }
+.mono-arcade-overlay {
+  padding: 1rem;
+  background: radial-gradient(ellipse at center, rgb(62 29 17 / 78%), rgb(25 16 18 / 94%));
+}
+.mono-arcade-overlay-title {
+  background-image: linear-gradient(90deg, rgb(48 19 8 / 22%), rgb(37 20 22 / 40%)), var(--arcade-village);
+  background-position: center;
+  background-size: cover;
+}
+.mono-arcade-overlay::before {
+  inset: 2%;
+  border: 2px solid rgb(255 203 87 / 65%);
+  border-radius: 10px;
+  background: none;
+  box-shadow: inset 0 0 0 3px rgb(86 39 15 / 45%);
+}
+.mono-arcade-overlay-title::after {
+  content: '';
+  position: absolute;
+  left: 2%; bottom: 0;
+  width: 27%; height: 83%;
+  background: var(--arcade-explorer) center bottom / contain no-repeat;
+  filter: drop-shadow(0 8px 6px rgb(49 23 9 / 45%));
+  pointer-events: none;
+}
+.mono-arcade-overlay-content {
+  z-index: 1;
+  gap: clamp(.4rem, 1.2cqw, .9rem);
+  max-width: min(75%, 42rem);
+  padding: clamp(.8rem, 2.4cqw, 1.6rem) clamp(1rem, 3cqw, 2rem);
+  color: #fff7e0;
+  background: linear-gradient(155deg, rgb(68 31 17 / 94%), rgb(38 24 23 / 94%));
+  border: 2px solid #e99a31;
+  border-radius: 16px;
+  box-shadow: 0 6px 0 rgb(98 45 15 / 70%), 0 14px 28px rgb(40 16 4 / 35%), inset 0 1px rgb(255 222 140 / 35%);
+}
+.mono-arcade-eyebrow { color: #73ead2; font-weight: 700; letter-spacing: .16em; }
+.mono-arcade-heading { color: #fff1ce; text-shadow: 3px 4px 0 #994116, 0 0 20px rgb(255 168 46 / 30%); }
+.mono-arcade-heading em { color: #ffcc49; }
+.mono-arcade-description { color: #ffecd0; }
+.mono-arcade-controls { color: #f5d5ad; }
+.mono-arcade-btn {
+  color: #4b260b;
+  background: linear-gradient(#ffe176, #ffb925);
+  border: 2px solid #ffeb9c;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #ac5510, 0 8px 22px rgb(255 165 34 / 30%);
+  text-transform: uppercase;
+}
+.mono-arcade-btn:hover { filter: brightness(1.12); }
+.mono-arcade-pad { background: linear-gradient(#492314, #29170f); }
+.mono-arcade-key { color: #ffe5a0; background: #713719; border: 2px solid #d7892b; border-radius: 12px; box-shadow: 0 3px 0 #31170d; }
+.mono-arcade-key-jump { color: #54200c; background: #ffc44c; border-color: #ffe58b; }
+.mono-arcade-key:active { background: #ffdf76; color: #4e250d; transform: translateY(2px); }
+@container (max-width: 520px) {
+  .mono-arcade-overlay { padding: .25rem; }
+  .mono-arcade-overlay-content { max-width: 80%; padding: .4rem .7rem; gap: .2rem; border-radius: 9px; }
+  .mono-arcade-overlay-title::after { width: 23%; height: 65%; left: 0; }
+  .mono-arcade-eyebrow { font-size: .44rem; }
+  .mono-arcade-heading { font-size: clamp(.7rem, 4cqw, 1.25rem); }
+  .mono-arcade-description, .mono-arcade-controls { font-size: clamp(.5rem, 1.8cqw, .65rem); line-height: 1.2; }
+  .mono-arcade-btn { padding: .35rem .7rem; font-size: .48rem; }
+}
+@media (max-width: 639px) {
+  .mono-arcade { border-radius: 12px; }
+  .mono-arcade summary { padding: .8rem; }
+  .mono-arcade-hud { gap: .55rem .75rem; padding: .7rem .6rem .55rem; }
+  .mono-arcade-hud-btn { min-width: 2.5rem; min-height: 2.5rem; }
+}
+
+/* Les illustrations profitent du canevas haute resolution ; la simulation reste en 320 x 180. */
+.mono-arcade canvas { image-rendering: auto; }
