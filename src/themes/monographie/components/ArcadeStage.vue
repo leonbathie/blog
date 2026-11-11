@@ -27,6 +27,8 @@ const mono = inject('mono')
 const villageImage = `${import.meta.env.BASE_URL}arcade/village.png`
 const explorerImage = `${import.meta.env.BASE_URL}arcade/explorer.png`
 const canvas = ref(null)
+const canvas3d = ref(null)
+const threeReady = ref(false)
 const stage = ref(null)
 const game = createGame()
 const fx = createEffects()
@@ -66,6 +68,32 @@ let raf = 0
 let last = 0
 let acc = 0
 let frames = 0
+let world3d = null
+let worldLoading = false
+let componentDisposed = false
+
+// Keep the original canvas available for devices without WebGL.
+async function ensureWorld3d() {
+  if (world3d || worldLoading || componentDisposed || !canvas3d.value) return
+  worldLoading = true
+  try {
+    const { createWorld3D } = await import('../game/world3d.js')
+    if (componentDisposed || !props.open || !canvas3d.value) return
+    world3d = createWorld3D(canvas3d.value)
+    threeReady.value = true
+  } catch (error) {
+    console.warn('[Arcade 221] rendu 3D indisponible, affichage illustré conservé.', error)
+  } finally {
+    worldLoading = false
+  }
+}
+
+function onContextLost(event) {
+  event.preventDefault()
+  threeReady.value = false
+  world3d?.dispose()
+  world3d = null
+}
 
 /* ---------- Synchronisation de l'état lisible par le gabarit ---------- */
 function sync() {
@@ -157,6 +185,17 @@ function handleEvents() {
 function render() {
   const el = canvas.value
   if (!el) return
+  if (world3d && threeReady.value) {
+    try {
+      world3d.render(game.state, game.cameraFor(VIEW_W, VIEW_H), frames)
+      return
+    } catch (error) {
+      console.warn('[Arcade 221] retour au rendu illustré.', error)
+      world3d.dispose()
+      world3d = null
+      threeReady.value = false
+    }
+  }
   const ctx = el.getContext('2d')
   if (!ctx) return
   ctx.setTransform(CANVAS_SCALE, 0, 0, CANVAS_SCALE, 0, 0)
@@ -476,7 +515,10 @@ function onVisibility() {
 watch(
   () => props.open,
   (open) => {
-    if (open) startLoop()
+    if (open) {
+      ensureWorld3d()
+      startLoop()
+    }
     else {
       releaseAll()
       if (running.value) paused.value = true
@@ -502,6 +544,7 @@ function onPointerChange(event) {
 
 onMounted(() => {
   sync()
+  if (props.open) ensureWorld3d()
   startLoop()
   document.addEventListener('visibilitychange', onVisibility)
   document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -518,6 +561,9 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  componentDisposed = true
+  world3d?.dispose()
+  world3d = null
   stopLoop()
   rememberBest()
   document.removeEventListener('visibilitychange', onVisibility)
@@ -579,11 +625,13 @@ defineExpose({ start: restart })
 
       <!-- Aire de jeu -->
       <div class="mono-arcade-view relative">
+        <canvas ref="canvas3d" aria-hidden="true" class="absolute inset-0 h-full w-full pointer-events-none" @webglcontextlost="onContextLost" />
         <canvas
           ref="canvas"
           :width="VIEW_W * CANVAS_SCALE"
           :height="VIEW_H * CANVAS_SCALE"
           class="mono-arcade-canvas block w-full"
+          :style="threeReady ? { opacity: 0 } : undefined"
           tabindex="0"
           role="application"
           :aria-label="`Arcade 221, jeu de plateforme. Salle ${view.levelIndex + 1} sur ${LEVELS.length}. ${touchMode ? 'Moitié gauche de l’écran pour courir, moitié droite pour sauter. Touchez encore en l’air pour un double saut.' : 'Flèches gauche et droite pour courir, Espace pour sauter et une seconde fois en l’air pour un double saut, P pour mettre en pause, R pour recommencer.'}`"
