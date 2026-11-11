@@ -121,7 +121,7 @@ export function createGame() {
     comboTimer: 0,
     camera: 0,
     message: '',
-    player: { x: 0, y: 0, w: PLAYER_W, h: PLAYER_H, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0, airJumpAvailable: false },
+    player: { x: 0, y: 0, w: PLAYER_W, h: PLAYER_H, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0, groundTravel: 0, airJumpAvailable: false },
     tiles: [],
     chips: [],
     spikes: [],
@@ -156,7 +156,7 @@ export function createGame() {
     state.combo = 0
     state.comboTimer = 0
     state.camera = 0
-    Object.assign(state.player, { x: spawn.x, y: spawn.y, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0, airJumpAvailable: false })
+    Object.assign(state.player, { x: spawn.x, y: spawn.y, vx: 0, vy: 0, dir: 1, onGround: false, anim: 0, groundTravel: 0, airJumpAvailable: false })
     coyote = 0
     buffer = 0
     holdTimer = 0
@@ -317,7 +317,11 @@ export function createGame() {
     p.vy = Math.min(MAX_FALL, p.vy + GRAVITY)
 
     /* ---- Collisions, axe par axe ---- */
+    const previousX = p.x
     if (moveAxis(p, p.vx, 0)) p.vx = 0
+    const movedX = p.x - previousX
+    // Face the direction of actual motion during acceleration and braking.
+    if (Math.abs(movedX) > 0.001) p.dir = Math.sign(movedX)
 
     const previousBottom = p.y + p.h
     const wasOnGround = p.onGround
@@ -335,7 +339,10 @@ export function createGame() {
     // Atterrissage : poussière et tassement, proportionnels à la vitesse de chute
     if (!wasOnGround && p.onGround) state.events.push({ type: 'land', x: p.x + p.w / 2, y: p.y + p.h, speed: fallSpeed })
 
-    p.anim += Math.abs(p.vx)
+    // Only grounded distance advances the gait, including a partial move
+    // before hitting a wall. Jumps and stationary frames keep their phase.
+    p.groundTravel = wasOnGround && p.onGround ? Math.abs(movedX) : 0
+    p.anim += p.groundTravel
 
     /* ---- Chute hors du niveau ---- */
     if (p.y > WORLD.h + 40) {

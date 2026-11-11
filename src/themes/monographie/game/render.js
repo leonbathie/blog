@@ -398,6 +398,26 @@ function player(ctx, state, scale = [1, 1], t = 0) {
   const p = state.player
   const x = Math.round(p.x)
   const y = Math.round(p.y)
+  const animatedExplorer = getArtwork('explorer-animated', 'png')
+  if (animatedExplorer) {
+    // Grounded distance rather than time keeps each step tied to movement.
+    const walking = p.onGround && p.groundTravel > 0.001
+    const frame = !p.onGround ? 7 : walking ? 1 + Math.floor(p.anim / 5) % 6 : 0
+    const frameWidth = animatedExplorer.naturalWidth / 4
+    const frameHeight = animatedExplorer.naturalHeight / 2
+    // Match the previous illustration's visible height. Individual soles sit
+    // at slightly different source rows, so align them to the ground here.
+    const height = 43
+    const width = height * frameWidth / frameHeight
+    const soleRow = [429, 425, 424, 425, 426, 424, 426, 426][frame]
+    ctx.save()
+    ctx.imageSmoothingEnabled = true
+    ctx.translate(x + p.w / 2, y + p.h)
+    ctx.scale(scale[0] * (p.dir < 0 ? -1 : 1), scale[1])
+    ctx.drawImage(animatedExplorer, (frame % 4) * frameWidth, Math.floor(frame / 4) * frameHeight, frameWidth, frameHeight, -width / 2, -height * soleRow / frameHeight, width, height)
+    ctx.restore()
+    return
+  }
   const explorer = getArtwork('explorer', 'png')
   if (explorer) {
     const walking = p.onGround && Math.abs(p.vx) > 0.2
