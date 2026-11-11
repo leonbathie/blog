@@ -57,6 +57,7 @@ function parseLevel(level) {
   const chips = []
   const spikes = []
   const walkers = []
+  const gates = []
   let spawn = { x: 2 * TILE, y: 12 * TILE }
   let exit = { x: (LEVEL_W - 4) * TILE, y: 11 * TILE }
 
@@ -67,13 +68,14 @@ function parseLevel(level) {
       const py = y * TILE
       if (t === 'o') chips.push({ x: px + (TILE - CHIP_SIZE) / 2, y: py + (TILE - CHIP_SIZE) / 2, w: CHIP_SIZE, h: CHIP_SIZE, taken: false })
       else if (t === '^') spikes.push({ x: px + 2, y: py + TILE - SPIKE_H, w: TILE - 4, h: SPIKE_H })
-      else if (t === 'w')
-        walkers.push({ x: px + 1, y: py + TILE - WALKER_H, w: WALKER_W, h: WALKER_H, vx: -WALKER_SPEED, alive: true, home: px + 1 })
+      else if (t === 'w' || t === 'r')
+        walkers.push({ x: px + 1, y: py + TILE - WALKER_H, w: WALKER_W, h: WALKER_H, vx: -(t === 'r' ? 1.15 : WALKER_SPEED), kind: t === 'r' ? 'runner' : 'guard', alive: true, home: px + 1 })
+      else if (t === 'g') gates.push({ x: px + 4, y: py + TILE - 24, w: 8, h: 24, offset: x * 11, active: (x * 11) % 180 < 90 })
       else if (t === 'S') spawn = { x: px, y: py + TILE - PLAYER_H }
       else if (t === 'E') exit = { x: px + 1, y: py + TILE - EXIT_H, w: EXIT_W, h: EXIT_H }
     }
   }
-  return { tiles, chips, spikes, walkers, spawn, exit }
+  return { tiles, chips, spikes, walkers, gates, spawn, exit }
 }
 
 /** Nature de la tuile à ces coordonnées monde */
@@ -109,6 +111,7 @@ export function createGame() {
     lives: START_LIVES,
     score: 0,
     frames: 0,
+    levelFrames: 0,
     chipsLeft: 0,
     chipsTotal: 0,
     camera: 0,
@@ -118,6 +121,7 @@ export function createGame() {
     chips: [],
     spikes: [],
     walkers: [],
+    gates: [],
     exit: { x: 0, y: 0, w: EXIT_W, h: EXIT_H },
     /** Événements du pas courant, lus puis vidés par la couche d'affichage (sons, confettis) */
     events: [],
@@ -131,14 +135,16 @@ export function createGame() {
 
   function loadLevel(index) {
     const level = LEVELS[index]
-    const { tiles, chips, spikes, walkers, spawn, exit } = parseLevel(level)
+    const { tiles, chips, spikes, walkers, gates, spawn, exit } = parseLevel(level)
     state.levelIndex = index
+    state.levelFrames = 0
     state.levelName = level.name
     state.hint = level.hint
     state.tiles = tiles
     state.chips = chips
     state.spikes = spikes
     state.walkers = walkers
+    state.gates = gates
     state.exit = exit
     state.chipsTotal = chips.length
     state.chipsLeft = chips.length
@@ -147,6 +153,7 @@ export function createGame() {
     coyote = 0
     buffer = 0
     holdTimer = 0
+    wasJump = false
   }
 
   function start() {
@@ -257,6 +264,7 @@ export function createGame() {
     if (state.phase !== 'playing') return state
 
     state.frames += 1
+    state.levelFrames += 1
     const p = state.player
 
     /* ---- Déplacement horizontal ---- */
@@ -331,6 +339,15 @@ export function createGame() {
     /* ---- Surtensions ---- */
     for (const spike of state.spikes) {
       if (overlap(p, spike)) {
+        die()
+        return state
+      }
+    }
+
+    // Barriers pulse for 90 frames, then rest for 90 frames.
+    for (const gate of state.gates) {
+      gate.active = (state.frames + gate.offset) % 180 < 90
+      if (gate.active && overlap(p, gate)) {
         die()
         return state
       }

@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import config from '../site.config.js'
 import { themes } from '../themes/index.js'
+import { pickWeightedTheme } from './weightedTheme.js'
 
 /**
  * Forme active du blog.
@@ -69,7 +70,7 @@ function pickByMode() {
     // On exclut la précédente : sur deux formes, cela revient à alterner,
     // et au-delà cela évite de retomber sur la même en rafraîchissant.
     const pool = themes.filter((t) => t.id !== previous)
-    return pool[Math.floor(Math.random() * pool.length)] ?? themes[0]
+    return pickWeightedTheme(pool) ?? themes[0]
   }
 
   // 'rotate' : la suivante dans l'ordre du registre

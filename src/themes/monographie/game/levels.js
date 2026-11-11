@@ -115,6 +115,9 @@ const [l4chipsMid, l4deckMid] = ledge(5, 45)
 const [l4chipsSlab, l4slab] = block(18, 30)
 const [l4chipsLow, l4deckLow] = ledge(13, 38)
 
+const [l5chips, l5decks] = ledge(6, 25, 44)
+const [l6chips, l6decks] = ledge(13, 32, 52)
+
 export const LEVELS = [
   build('01 — Mise sous tension', 'Flèches ou A/D pour courir, Espace pour sauter.', [
     NONE,
@@ -181,7 +184,7 @@ export const LEVELS = [
     ground(18, 42),
   ]),
 
-  build('04 — Cœur du réseau', 'Dernière salle : le terminal est au bout.', [
+  build('04 — Cœur du réseau', 'Le terminal est au bout de la salle.', [
     NONE,
     l4chipsHigh,
     l4deckHigh,
@@ -200,6 +203,21 @@ export const LEVELS = [
     ground(26, 42),
     ground(26, 42),
   ]),
+
+  build('05 \u2014 Temp\u00eate \u00e9lectrique', 'Les barri\u00e8res pulsent : attendez leur extinction ou sautez par-dessus.', [
+    NONE, NONE, NONE, NONE, NONE, NONE,
+    l5chips, l5decks, NONE, NONE, NONE, NONE,
+    place({ 7: 'o', 25: 'o', 34: 'o', 45: 'o', 55: 'o' }),
+    place({ 3: 'S', 10: 'g', 19: 'r', 39: 'g', 49: 'r', 59: 'E' }),
+    ground(30), ground(30), ground(30),
+  ]),
+  build('06 \u2014 Le dernier circuit', 'Robots rapides et barri\u00e8res : observez le rythme avant de foncer !', [
+    NONE, NONE, NONE, NONE, NONE, NONE,
+    l6chips, l6decks, NONE, NONE, NONE, NONE,
+    place({ 6: 'o', 17: 'o', 26: 'o', 33: 'o', 46: 'o', 55: 'o' }),
+    place({ 3: 'S', 10: 'r', 29: 'g', 38: 'r', 59: 'E' }),
+    ground(21, 50), ground(21, 50), ground(21, 50),
+  ]),
 ]
 
 /**
@@ -217,7 +235,8 @@ export function validateLevels(levels = LEVELS) {
     const hazards = []
     for (let x = 0; x < LEVEL_W; x++) {
       if (row[x] === '^') hazards.push({ kind: 'surtension', at: x, a: x, b: x })
-      if (row[x] === 'w') hazards.push({ kind: 'patrouilleur', at: x, a: x - WALKER_RANGE_TILES, b: x + WALKER_RANGE_TILES })
+      if (row[x] === 'w' || row[x] === 'r') hazards.push({ kind: 'patrouilleur', at: x, a: x - WALKER_RANGE_TILES, b: x + WALKER_RANGE_TILES })
+      if (row[x] === 'g') hazards.push({ kind: 'barriere', at: x, a: x, b: x })
     }
 
     const pits = []
