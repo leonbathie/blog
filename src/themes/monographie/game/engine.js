@@ -72,7 +72,7 @@ function parseLevel(level) {
       if (t === 'o') chips.push({ x: px + (TILE - CHIP_SIZE) / 2, y: py + (TILE - CHIP_SIZE) / 2, w: CHIP_SIZE, h: CHIP_SIZE, taken: false })
       else if (t === '^') spikes.push({ x: px + 2, y: py + TILE - SPIKE_H, w: TILE - 4, h: SPIKE_H })
       else if (t === 'w' || t === 'r' || t === 'm')
-        walkers.push({ x: px + 1, y: py + TILE - WALKER_H, w: WALKER_W, h: WALKER_H, vx: -(t === 'r' ? 1.15 : t === 'm' ? 0.4 : WALKER_SPEED), kind: t === 'r' ? 'runner' : t === 'm' ? 'monkey' : 'guard', alive: true, home: px + 1, throwCooldown: 105 + x * 3 })
+        walkers.push({ x: px + 1, y: py + TILE - WALKER_H, w: WALKER_W, h: WALKER_H, vx: t === 'm' ? 0 : -(t === 'r' ? 1.15 : WALKER_SPEED), kind: t === 'r' ? 'runner' : t === 'm' ? 'monkey' : 'guard', alive: true, home: px + 1, dir: -1, throwWindup: 0, throwCooldown: 105 + x * 3 })
       else if (t === 'g') gates.push({ x: px + 4, y: py + TILE - 24, w: 8, h: 24, offset: x * 11, active: (x * 11) % 180 < 90 })
       else if (t === 'S') spawn = { x: px, y: py + TILE - PLAYER_H }
       else if (t === 'E') exit = { x: px + 1, y: py + TILE - EXIT_H, w: EXIT_W, h: EXIT_H }
@@ -393,16 +393,28 @@ export function createGame() {
     /* ---- Patrouilleurs ---- */
     for (const w of state.walkers) {
       if (!w.alive) continue
-      if (w.kind === 'monkey' && --w.throwCooldown <= 0) {
-        // A slow, visible arc gives the player time to dodge or jump.
-        const dx = p.x - w.x
-        const dy = p.y - w.y
-        if (Math.abs(dx) < 190 && Math.abs(dy) < 100) {
-          const direction = dx < 0 ? -1 : 1
-          state.bananas.push({ x: w.x + w.w / 2, y: w.y - 4, w: 10, h: 8, vx: direction * 1.25, vy: -2.5, age: 0 })
-          state.events.push({ type: 'banana', x: w.x, y: w.y })
-          w.throwCooldown = 160
-        } else w.throwCooldown = 25
+      if (w.kind === 'monkey') {
+        // Un singe reste sur sa branche. Sa préparation laisse au joueur le
+        // temps de voir le danger ; seule la banane peut toucher le joueur.
+        const dx = p.x + p.w / 2 - (w.x + w.w / 2)
+        const dy = p.y + p.h / 2 - (w.y - 4)
+        w.dir = dx < 0 ? -1 : 1
+        if (w.throwWindup > 0) {
+          w.throwWindup -= 1
+          if (w.throwWindup === 0) {
+            // Vise la position actuelle, pas la position future : on peut
+            // esquiver en courant ou en sautant dès que le geste est visible.
+            const flight = Math.max(42, Math.min(80, Math.abs(dx) / 1.8 + 35))
+            state.bananas.push({ x: w.x + w.w / 2, y: w.y - 4, w: 10, h: 8,
+              vx: dx / flight, vy: (dy - 0.025 * flight * (flight - 1)) / flight, age: 0 })
+            state.events.push({ type: 'banana', x: w.x, y: w.y })
+            w.throwCooldown = 180
+          }
+        } else if (--w.throwCooldown <= 0) {
+          if (Math.abs(dx) < 190 && Math.abs(dy) < 120) w.throwWindup = 28
+          else w.throwCooldown = 25
+        }
+        continue
       }
       const next = { ...w, x: w.x + w.vx }
       const aheadX = w.vx > 0 ? next.x + w.w + 1 : next.x - 1

@@ -132,10 +132,12 @@ function skyAdventure(variant = 0) {
     rows[y] = place({ [x]: '--------' })
     rows[y - 1] = place({ [x + 3]: 'o' })
   }
-  // Les singes restent sur leurs plateformes et annoncent leurs lancers.
+  // Les singes sont perchés à côté des passerelles, jamais sur le chemin.
+  // La hauteur de leur branche correspond au dessus de la passerelle voisine.
   for (const i of [1, 4, 7]) {
     const [y, x] = decks[i]
-    rows[y - 1] = place({ [x + 2]: 'o', [x + 6]: 'm' })
+    const perchX = i === 4 ? x - 2 : x + 9
+    rows[y - 1] = place({ [x + 3]: 'o', [perchX]: 'm' })
   }
   rows[1] = place({ [xs[9] + 2]: 'E', [xs[9] + 5]: 'o' })
   const name = variant ? '08 — Les cascades célestes' : '07 — Les jardins du ciel'
