@@ -93,11 +93,6 @@ plein écran. Les touches ◀ ▶ SAUT restent sous l'image. Le téléphone vibr
 brièvement aux sauts, aux puces et aux chutes. Il vit dans
 `src/themes/monographie/game/` :
 
-Le village et les personnages sont rendus en 3D avec Three.js, tandis que la
-physique reste celle du jeu de plateforme. Si WebGL est indisponible, le rendu
-illustré 2D prend le relais. Les crédits des modèles animés figurent dans
-`public/arcade/models/ATTRIBUTION.txt`.
-
 ```
 levels.js   les salles, posées par coordonnée, + validateLevels()
 engine.js   la logique : physique, collisions, vies, score — sans aucun DOM
