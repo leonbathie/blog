@@ -43,8 +43,16 @@ const input = { left: false, right: false, jump: false }
 const JUMP_MIN = 7
 let jumpHeld = false
 let jumpMin = 0
+let queuedJump = false
+let jumpGap = false
 function jumpPress() {
+  if (jumpHeld) return // les répétitions clavier ne sont pas de nouveaux sauts
   jumpHeld = true
+  // Deux tapotements très rapides doivent tout de même produire deux fronts.
+  if (input.jump || jumpGap) {
+    queuedJump = true
+    return
+  }
   jumpMin = JUMP_MIN
   input.jump = true
 }
@@ -70,6 +78,7 @@ function sync() {
   view.message = s.message
   view.frames = s.frames
   view.levelFrames = s.levelFrames
+  view.combo = s.combo || 0
   view.progress = s.exit.x > 0 ? Math.max(0, Math.min(1, s.player.x / s.exit.x)) : 0
 }
 
@@ -83,8 +92,8 @@ const hintText = computed(() => {
 })
 const controlsText = computed(() =>
   touchMode.value
-    ? 'Moitié gauche de l’écran : courir · Moitié droite : sauter · ou les touches ◀ ▶ SAUT'
-    : '← → ou A/D pour courir · Espace pour sauter · P pause · R recommencer',
+    ? 'À gauche : courir · à droite : sauter · touchez encore en l’air pour un double saut'
+    : '← → ou A/D pour courir · Espace pour sauter, puis encore en l’air · P pause',
 )
 
 const running = computed(() => view.phase === 'playing' || view.phase === 'dying')
@@ -111,11 +120,17 @@ function handleEvents() {
     if (e.type === 'jump') {
       mono.sfx.jump()
       buzz(8)
+    } else if (e.type === 'airJump') {
+      mono.sfx.jump()
+      buzz(12)
+    } else if (e.type === 'combo') {
+      mono.sfx.blip()
+      buzz(8)
     } else if (e.type === 'land') {
       if ((e.speed ?? 0) > 6) buzz(10)
     } else if (e.type === 'chip') {
       mono.sfx.blip()
-      mono.addScore(SCORE.chip, 1)
+      mono.addScore(e.points ?? SCORE.chip, 1)
       buzz(12)
     } else if (e.type === 'stomp') {
       mono.sfx.blip()
@@ -156,8 +171,20 @@ function frame(now) {
     let steps = 0
     while (acc >= STEP_MS && steps < 5) {
       game.step(input)
-      if (jumpMin > 0) jumpMin -= 1
-      if (!jumpHeld && jumpMin <= 0) input.jump = false
+      if (jumpGap) {
+        jumpGap = false
+        if (queuedJump) {
+          queuedJump = false
+          jumpMin = JUMP_MIN
+          input.jump = true
+        }
+      } else {
+        if (jumpMin > 0) jumpMin -= 1
+        if (jumpMin <= 0 && (!jumpHeld || queuedJump)) {
+          input.jump = false
+          if (queuedJump) jumpGap = true
+        }
+      }
       handleEvents()
       fx.update()
       acc -= STEP_MS
@@ -404,6 +431,8 @@ function releaseAll() {
   input.jump = false
   jumpHeld = false
   jumpMin = 0
+  queuedJump = false
+  jumpGap = false
   run.id = null
   run.dir = 0
   jumpZone.id = null
@@ -498,7 +527,10 @@ defineExpose({ start: restart })
 
 <template>
   <details class="mono-arcade" :open="open" @toggle="emit('update:open', $event.target.open)">
-    <summary>Une pause au laboratoire : jouer à Arcade 221</summary>
+    <summary>
+      <span class="mono-arcade-summary-title"><span class="mono-arcade-summary-icon" aria-hidden="true">✦</span> Une pause au laboratoire <strong>ARCADE 221</strong></span>
+      <span class="mono-arcade-summary-action">{{ open ? 'FERMER' : 'JOUER' }}</span>
+    </summary>
 
     <div ref="stage" class="mono-arcade-stage relative border-t-2 border-amber-500/60 bg-[#2a1708] dark:border-amber-400/50" :class="fullscreen ? 'mono-arcade-full' : ''">
       <!-- Tableau de bord -->
@@ -507,11 +539,12 @@ defineExpose({ start: restart })
         role="status"
         aria-live="polite"
       >
-        <span>SALLE {{ String(view.levelIndex + 1).padStart(2, '0') }}/{{ LEVELS.length }}</span>
-        <span>VIES <span class="text-zinc-100">{{ '●'.repeat(Math.max(0, view.lives)) || '—' }}</span></span>
-        <span>PUCES <span class="text-zinc-100">{{ chipsTaken }}/{{ view.chipsTotal }}</span></span>
-        <span>SCORE <span class="text-zinc-100">{{ String(view.score).padStart(5, '0') }}</span></span>
-        <span class="hidden sm:inline">RECORD <span class="text-zinc-100">{{ String(best).padStart(5, '0') }}</span></span>
+        <span class="mono-arcade-stat"><small>SALLE</small><b>{{ String(view.levelIndex + 1).padStart(2, '0') }}<i>/{{ LEVELS.length }}</i></b></span>
+        <span class="mono-arcade-stat"><small>VIES</small><b class="mono-arcade-hearts" :aria-label="`${view.lives} vies`">{{ '♥'.repeat(Math.max(0, view.lives)) || '—' }}</b></span>
+        <span class="mono-arcade-stat"><small>PUCES</small><b>{{ chipsTaken }}<i>/{{ view.chipsTotal }}</i></b></span>
+        <span class="mono-arcade-stat"><small>SCORE</small><b>{{ String(view.score).padStart(5, '0') }}</b></span>
+        <span class="mono-arcade-stat mono-arcade-record"><small>RECORD</small><b>{{ String(best).padStart(5, '0') }}</b></span>
+        <span v-if="view.combo > 1" class="mono-arcade-combo">COMBO ×{{ view.combo }}</span>
         <span class="ml-auto flex items-center gap-1">
           <button
             v-if="running"
@@ -549,7 +582,7 @@ defineExpose({ start: restart })
           class="mono-arcade-canvas block w-full"
           tabindex="0"
           role="application"
-          :aria-label="`Arcade 221, jeu de plateforme. Salle ${view.levelIndex + 1} sur ${LEVELS.length}. ${touchMode ? 'Moitié gauche de l’écran pour courir, moitié droite pour sauter.' : 'Flèches gauche et droite pour courir, Espace pour sauter, P pour mettre en pause, R pour recommencer.'}`"
+          :aria-label="`Arcade 221, jeu de plateforme. Salle ${view.levelIndex + 1} sur ${LEVELS.length}. ${touchMode ? 'Moitié gauche de l’écran pour courir, moitié droite pour sauter. Touchez encore en l’air pour un double saut.' : 'Flèches gauche et droite pour courir, Espace pour sauter et une seconde fois en l’air pour un double saut, P pour mettre en pause, R pour recommencer.'}`"
           @keydown="onKeyDown"
           @keyup="onKeyUp"
           @blur="onBlur"
@@ -582,36 +615,30 @@ defineExpose({ start: restart })
         </div>
 
         <!-- Écrans : un appui n'importe où vaut le bouton principal -->
-        <div
-          v-if="overlay"
-          class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-950/82 px-4 text-center"
-          @click="onOverlayTap"
-        >
-          <p class="font-pixel text-[11px] leading-relaxed text-amber-400 sm:text-[13px]">
-            <template v-if="overlay === 'title'">ARCADE 221 — LABO DE DAKAR</template>
-            <template v-else-if="overlay === 'paused'">PAUSE</template>
-            <template v-else-if="overlay === 'cleared'">{{ view.message }}</template>
-            <template v-else-if="overlay === 'won'">RÉSEAU RÉTABLI</template>
-            <template v-else>RÉSEAU HORS TENSION</template>
-          </p>
-
-          <p v-if="overlay === 'title'" class="max-w-md font-mono text-[11px] leading-relaxed text-zinc-300">
-            Remettez le réseau sous tension : traversez les {{ LEVELS.length }} salles jusqu'au terminal.
-            Les puces rapportent des points. Robots, surtensions et barrières électriques coûtent une vie.
-          </p>
-          <p v-else-if="overlay === 'won'" class="font-mono text-[11px] text-zinc-300">
-            {{ LEVELS.length }} salles en {{ seconds }} s · score {{ view.score }} · record {{ best }}
-          </p>
-          <p v-else-if="overlay === 'over'" class="font-mono text-[11px] text-zinc-300">
-            Score {{ view.score }} · record {{ best }}
-          </p>
-          <p v-else-if="overlay === 'paused'" class="font-mono text-[11px] text-zinc-300">
-            {{ touchMode ? 'Touchez pour reprendre' : 'P ou Échap pour reprendre' }}
-          </p>
-
-          <button type="button" class="mono-arcade-btn" @click="primary">{{ primaryLabel }}</button>
-
-          <p v-if="overlay === 'title'" class="max-w-md font-mono text-[10px] leading-relaxed text-zinc-500">{{ controlsText }}</p>
+        <div v-if="overlay" class="mono-arcade-overlay" :class="`mono-arcade-overlay-${overlay}`" @click="onOverlayTap">
+          <div class="mono-arcade-overlay-content">
+            <p class="mono-arcade-eyebrow"><span aria-hidden="true">✦</span> LABO DE DAKAR <span aria-hidden="true">✦</span></p>
+            <h3 class="mono-arcade-heading">
+              <template v-if="overlay === 'title'">ARCADE <em>221</em></template>
+              <template v-else-if="overlay === 'paused'">PETITE PAUSE</template>
+              <template v-else-if="overlay === 'cleared'">SALLE <em>RÉTABLIE !</em></template>
+              <template v-else-if="overlay === 'won'">MISSION <em>ACCOMPLIE !</em></template>
+              <template v-else>À TOI DE <em>REJOUER !</em></template>
+            </h3>
+            <p v-if="overlay === 'title'" class="mono-arcade-description">
+              Six salles, des robots et un réseau à sauver. Prêt pour l'aventure ?
+            </p>
+            <p v-else-if="overlay === 'cleared'" class="mono-arcade-description">{{ view.message }}</p>
+            <p v-else-if="overlay === 'won'" class="mono-arcade-description">
+              Bravo, le labo est sauvé ! {{ LEVELS.length }} salles en {{ seconds }} s · {{ view.score }} points
+            </p>
+            <p v-else-if="overlay === 'over'" class="mono-arcade-description">
+              Bien joué ! {{ view.score }} points · record {{ best }}. Une autre partie ?
+            </p>
+            <p v-else class="mono-arcade-description">{{ touchMode ? 'Touchez pour reprendre' : 'P ou Échap pour reprendre' }}</p>
+            <button type="button" class="mono-arcade-btn" @click="primary"><span aria-hidden="true">▶</span> {{ primaryLabel }}</button>
+            <p v-if="overlay === 'title'" class="mono-arcade-controls">{{ controlsText }}</p>
+          </div>
         </div>
 
         <!-- Conseil de la salle, en jeu -->

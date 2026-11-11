@@ -92,6 +92,22 @@ function sky(ctx) {
 
 /** Étoiles et ville : plans lointains, dessinés en coordonnées écran */
 function parallax(ctx, cam) {
+  // A warm distant sun gives the little world its own horizon.
+  const sunX = Math.round(225 - cam.x * 0.025)
+  const sunY = Math.round(56 - cam.y * 0.12)
+  ctx.fillStyle = 'rgba(251, 146, 60, 0.10)'
+  ctx.beginPath()
+  ctx.arc(sunX, sunY, 31, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(sunX, sunY, 22, 0, Math.PI * 2)
+  ctx.clip()
+  ctx.fillStyle = '#f7a65b'
+  ctx.fillRect(sunX - 22, sunY - 22, 44, 44)
+  ctx.fillStyle = 'rgba(124, 53, 68, 0.45)'
+  for (let i = 0; i < 4; i++) ctx.fillRect(sunX - 22, sunY + 3 + i * 5, 44, 2)
+  ctx.restore()
   ctx.fillStyle = C.star
   for (const s of STARS) {
     const x = s.x - cam.x * 0.15
@@ -109,6 +125,7 @@ function parallax(ctx, cam) {
     if (x + b.w < -10 || x > VIEW_W + 10) continue
     ctx.fillStyle = C.city
     ctx.fillRect(x, Math.round(base - b.h), b.w, b.h)
+    ctx.fillRect(x + Math.floor(b.w / 2), Math.round(base - b.h - 4), 1, 4)
     ctx.fillStyle = C.window
     for (const w of b.windows) ctx.fillRect(x + w.x, Math.round(base - b.h + w.y), 2, 3)
   }
@@ -177,8 +194,17 @@ function chips(ctx, state, cam, t) {
     ctx.fillStyle = C.chipFace
     ctx.fillRect(x + 1, y + 1, c.w - 2, c.h - 2)
     ctx.shadowBlur = 0
+    ctx.fillStyle = '#fff2b3'
+    ctx.fillRect(x + 2, y + 2, 4, 1)
+    ctx.fillRect(x + 2, y + 3, 1, 3)
     ctx.fillStyle = C.chipEdge
-    ctx.fillRect(x + 2, y + 2, 2, 2)
+    ctx.fillRect(x + 5, y + 4, 2, 2)
+    // A glint makes collectibles discoverable at a glance.
+    if (Math.floor(t / 12 + c.x / 16) % 4 === 0) {
+      ctx.fillStyle = '#fff7d1'
+      ctx.fillRect(x + c.w + 2, y - 2, 1, 5)
+      ctx.fillRect(x + c.w, y, 5, 1)
+    }
   }
 }
 
@@ -311,101 +337,94 @@ function exitTerminal(ctx, state, cam, t) {
   for (let i = 0; i < 3; i++) ctx.fillRect(x + 3 + i * 4, e.y + 18, 2, 2)
 }
 
-/** L'ingénieur : casque à visière, plastron clair, sac dorsal */
-function player(ctx, state, scale = [1, 1]) {
+/** The little explorer: expressive helmet, scarf and lab satchel. */
+function player(ctx, state, scale = [1, 1], t = 0) {
   const p = state.player
   const x = Math.round(p.x)
   const y = Math.round(p.y)
   const walking = p.onGround && Math.abs(p.vx) > 0.2
-  const stride = walking ? Math.floor(p.anim / 7) % 2 : 0
-  const flip = p.dir < 0
+  const stride = walking ? Math.floor(p.anim / 6) % 2 : 0
+  const airborne = !p.onGround
+  const blink = p.onGround && !walking && t % 180 >= 175
+  const bob = walking ? stride : (p.onGround && Math.sin(t / 20) > 0.75 ? 1 : 0)
 
   ctx.save()
-  if (scale[0] !== 1 || scale[1] !== 1) {
-    // Tassement ou étirement autour des pieds : l'ancrage au sol ne bouge pas
-    const fx = x + p.w / 2
-    const fy = y + p.h
-    ctx.translate(fx, fy)
-    ctx.scale(scale[0], scale[1])
-    ctx.translate(-fx, -fy)
-  }
-  if (flip) {
-    ctx.translate(x + p.w, 0)
-    ctx.scale(-1, 1)
-    ctx.translate(-x, 0)
-  }
+  const fx = x + p.w / 2
+  const fy = y + p.h
+  ctx.translate(fx, fy)
+  ctx.scale(scale[0] * (p.dir < 0 ? -1 : 1), scale[1])
+  ctx.translate(-fx, -fy)
 
-  // Ombre de contact : ancre le personnage au sol sans l'enfermer dans un
-  // rectangle sombre, comme le ferait un fond plein sur toute sa boîte.
   if (p.onGround) {
-    ctx.fillStyle = 'rgba(23, 16, 41, 0.45)'
-    ctx.fillRect(x + 1, y + p.h, p.w - 2, 1)
+    ctx.fillStyle = 'rgba(18, 10, 28, 0.42)'
+    ctx.fillRect(x, y + p.h, p.w, 1)
   }
 
-  // Foulard anime et insigne du labo : une silhouette identifiable en mouvement.
-  ctx.fillStyle = '#facc15'
-  const scarf = p.onGround && !walking ? 0 : Math.floor(p.anim / 8) % 2
-  ctx.fillRect(x - 2 - scarf, y + 7, 5, 2)
-  ctx.fillRect(x - 3 - scarf, y + 8, 3, 2)
+  // The scarf flutters while running or jumping.
+  const flutter = airborne ? Math.floor(t / 6) % 2 : walking ? stride : Math.floor(t / 25) % 2
+  ctx.fillStyle = '#a74319'
+  ctx.fillRect(x - 4 - flutter, y + 9 - bob, 7, 3)
+  ctx.fillStyle = '#ffd653'
+  ctx.fillRect(x - 4 - flutter, y + 9 - bob, 7, 2)
+  ctx.fillRect(x - 5 - flutter, y + 10 - bob, 3, 2)
 
-  // Sac dorsal, dessiné en premier : il passe derrière le corps
-  ctx.fillStyle = C.pack
-  ctx.fillRect(x - 1, y + 8, 3, 8)
-  ctx.fillStyle = C.packLight
-  ctx.fillRect(x - 1, y + 9, 1, 3)
-
-  // Jambes : deux phases de marche, repliées en l'air
-  ctx.fillStyle = C.suitDark
-  if (!p.onGround) {
+  ctx.fillStyle = '#582640'
+  ctx.fillRect(x - 1, y + 10, 4, 7)
+  ctx.fillStyle = '#df6b3b'
+  ctx.fillRect(x, y + 11, 2, 4)
+  // The satchel lamp shows that the mid-air boost is ready.
+  ctx.fillStyle = p.airJumpAvailable ? '#70fff0' : '#84445a'
+  ctx.fillRect(x, y + 12, 1, 2)
+  ctx.fillStyle = '#422442'
+  if (airborne) {
     ctx.fillRect(x + 2, y + 16, 3, 4)
     ctx.fillRect(x + 7, y + 15, 3, 4)
-    ctx.fillStyle = C.boot
-    ctx.fillRect(x + 2, y + 19, 4, 2)
-    ctx.fillRect(x + 7, y + 18, 4, 2)
-  } else if (walking) {
-    ctx.fillRect(x + 1 + stride * 2, y + 17, 3, 4)
-    ctx.fillRect(x + 7 - stride * 2, y + 17, 3, 4)
-    ctx.fillStyle = C.boot
-    ctx.fillRect(x + 1 + stride * 2, y + 20, 4, 2)
-    ctx.fillRect(x + 7 - stride * 2, y + 20, 4, 2)
+    ctx.fillStyle = '#fff0c1'
+    ctx.fillRect(x + 1, y + 19, 5, 2)
+    ctx.fillRect(x + 7, y + 18, 5, 2)
   } else {
-    ctx.fillRect(x + 2, y + 17, 3, 4)
-    ctx.fillRect(x + 7, y + 17, 3, 4)
-    ctx.fillStyle = C.boot
-    ctx.fillRect(x + 2, y + 20, 3, 2)
-    ctx.fillRect(x + 7, y + 20, 3, 2)
+    ctx.fillRect(x + 2 + stride, y + 16, 3, 5)
+    ctx.fillRect(x + 7 - stride, y + 16, 3, 5)
+    ctx.fillStyle = '#fff0c1'
+    ctx.fillRect(x + 1 + stride, y + 20, 5, 2)
+    ctx.fillRect(x + 7 - stride, y + 20, 5, 2)
   }
 
-  // Buste
-  ctx.fillStyle = C.suit
-  ctx.fillRect(x + 1, y + 8, 10, 9)
-  ctx.fillStyle = C.suitDark
-  ctx.fillRect(x + 1, y + 15, 10, 2)
-  // Plastron clair : donne un centre lisible à la silhouette
-  ctx.fillStyle = C.panel
-  ctx.fillRect(x + 4, y + 10, 4, 4)
-  ctx.fillStyle = C.visor
-  ctx.fillRect(x + 5, y + 11, 2, 1)
-  ctx.fillStyle = '#facc15'
-  ctx.fillRect(x + 5, y + 13, 2, 1)
+  // Bright coral suit, cream chest badge and gloves.
+  ctx.fillStyle = '#8b3650'
+  ctx.fillRect(x + 1, y + 9 - bob, 10, 8)
+  ctx.fillStyle = '#ff8555'
+  ctx.fillRect(x + 2, y + 9 - bob, 8, 6)
+  ctx.fillStyle = '#ffe9b5'
+  ctx.fillRect(x + 4, y + 10 - bob, 4, 4)
+  ctx.fillStyle = '#19a4a4'
+  ctx.fillRect(x + 5, y + 11 - bob, 2, 2)
+  ctx.fillStyle = '#ca4e4e'
+  ctx.fillRect(x + 9, y + 10 - bob + (walking ? stride : 0), 3, 5)
+  ctx.fillStyle = '#ffe9b5'
+  ctx.fillRect(x + 10, y + 14 - bob + (walking ? stride : 0), 2, 2)
 
-  // Bras avant, qui balance avec la foulée
-  ctx.fillStyle = C.suitDark
-  ctx.fillRect(x + 9, y + 9 + (walking ? stride : 0), 3, 6)
-
-  // Casque
-  ctx.fillStyle = C.suitDark
-  ctx.fillRect(x + 1, y, 10, 8)
-  ctx.fillStyle = C.suit
-  ctx.fillRect(x + 2, y + 1, 8, 6)
-  // Visière large, avec un reflet
-  ctx.fillStyle = C.visorDark
-  ctx.fillRect(x + 4, y + 2, 7, 4)
-  ctx.fillStyle = C.visor
-  ctx.fillRect(x + 5, y + 3, 5, 2)
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(x + 8, y + 3, 1, 1)
-
+  // Oversized helmet and expressive face: eyes blink when resting.
+  ctx.fillStyle = '#542744'
+  ctx.fillRect(x + 1, y - bob, 10, 9)
+  ctx.fillRect(x, y + 2 - bob, 12, 5)
+  ctx.fillStyle = '#ffd579'
+  ctx.fillRect(x + 2, y + 1 - bob, 8, 7)
+  ctx.fillStyle = '#fff2ce'
+  ctx.fillRect(x + 2, y + 1 - bob, 7, 1)
+  ctx.fillStyle = '#593148'
+  ctx.fillRect(x + 3, y + 3 - bob, 7, 4)
+  ctx.fillStyle = '#f6b776'
+  ctx.fillRect(x + 4, y + 3 - bob, 6, 3)
+  ctx.fillStyle = '#30223c'
+  ctx.fillRect(x + 5, y + (blink ? 5 : 4) - bob, 1, 1)
+  ctx.fillRect(x + 8, y + (blink ? 5 : 4) - bob, 1, 1)
+  ctx.fillStyle = '#fff4d6'
+  ctx.fillRect(x + 6, y + 6 - bob, 2, 1)
+  ctx.fillStyle = '#ff8c82'
+  ctx.fillRect(x + 9, y + 5 - bob, 1, 1)
+  ctx.fillStyle = '#61eee3'
+  ctx.fillRect(x + 4, y - bob, 3, 1)
   ctx.restore()
 }
 
@@ -436,7 +455,7 @@ export function draw(ctx, state, cam, t, fx = null) {
   walkers(ctx, state, cam, t)
   exitTerminal(ctx, state, cam, t)
   if (fx) fx.drawWorld(ctx)
-  player(ctx, state, fx ? fx.scale() : [1, 1])
+  player(ctx, state, fx ? fx.scale() : [1, 1], t)
   ctx.restore()
   ctx.restore()
 
@@ -498,8 +517,13 @@ export function createEffects() {
         } else if (e.type === 'jump') {
           squash = -6
           burst(e.x, e.y, 3, { angle: Math.PI / 2, spread: 2.4, speed: 0.6, gravity: 0.05, life: 12, colors: ['#d6b370', '#9a6b3a'] })
+        } else if (e.type === 'airJump') {
+          squash = -5
+          burst(e.x, e.y, 9, { angle: Math.PI / 2, spread: Math.PI, speed: 1.3, gravity: 0.02, life: 20, colors: ['#61eee3', '#c4fff6', '#ffffff'] })
         } else if (e.type === 'chip') {
           burst(e.x, e.y, 10, { angle: -Math.PI / 2, spread: Math.PI * 2, speed: 1.4, gravity: 0.04, life: 26, colors: ['#fde68a', '#fbbf24', '#ffffff'], size: 1 })
+        } else if (e.type === 'combo') {
+          burst(e.x, e.y, 7, { angle: -Math.PI / 2, spread: Math.PI * 2, speed: 1.7, gravity: 0.025, life: 24, colors: ['#70fff0', '#ffe68a', '#ffffff'] })
         } else if (e.type === 'stomp') {
           shake = Math.max(shake, 3)
           burst(e.x, e.y, 10, { angle: -Math.PI / 2, spread: Math.PI, speed: 1.8, gravity: 0.15, life: 24, colors: ['#f87171', '#7f1d1d', '#fef08a'], size: 2 })

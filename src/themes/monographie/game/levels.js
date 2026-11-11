@@ -119,7 +119,7 @@ const [l5chips, l5decks] = ledge(6, 25, 44)
 const [l6chips, l6decks] = ledge(13, 32, 52)
 
 export const LEVELS = [
-  build('01 — Mise sous tension', 'Flèches ou A/D pour courir, Espace pour sauter.', [
+  build('01 — Mise sous tension', 'Flèches ou A/D pour courir · Espace deux fois pour un double saut.', [
     NONE,
     NONE,
     NONE,
@@ -140,9 +140,9 @@ export const LEVELS = [
     ground(30),
     ground(30),
     ground(30),
-  ], 'Moitié gauche de l’écran : courir · moitié droite : sauter (ou les touches ◀ ▶ SAUT).'),
+  ], 'Cours avec ◀ ▶ · touche SAUT deux fois pour un double saut !'),
 
-  build('02 — Baie de brassage', 'Maintenir Espace saute plus haut.', [
+  build('02 — Baie de brassage', 'Enchaîne les puces rapidement pour multiplier les points !', [
     NONE,
     NONE,
     NONE,
@@ -162,7 +162,7 @@ export const LEVELS = [
     ground(26, 50),
     ground(26, 50),
     ground(26, 50),
-  ], 'Garder SAUT enfoncé saute plus haut.'),
+  ], 'Enchaîne les puces rapidement pour multiplier les points !'),
 
   build('03 — Salle blanche', 'Retomber sur un patrouilleur le neutralise.', [
     NONE,
