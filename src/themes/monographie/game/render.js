@@ -441,66 +441,103 @@ function walkers(ctx, state, cam, t) {
   }
 }
 
-/** Expressive monkey silhouettes sit within their physical collision box. */
+/** Trees belong to the scenery, not the solid platforms. Each branch ends
+ * beneath the monkey's collision box, so the animal has a visible perch. */
+function monkeyTrees(ctx, state, cam, t) {
+  for (const w of state.walkers) {
+    if (w.kind !== 'monkey' || !visible(cam, w.x - 55, 110)) continue
+    if (w.y + w.h < cam.y - 70 || w.y > cam.y + VIEW_H + 70) continue
+    const x = w.x + w.w / 2
+    const y = w.y + w.h
+    // Alternate the trunk side to keep sightlines open along the ascent.
+    const side = Math.floor(w.home / TILE) % 2 ? 1 : -1
+    const trunk = x + side * 38
+    ctx.save()
+    ctx.lineCap = 'round'
+    // Soft canopy behind the trunk leaves the monkey and projectiles readable.
+    const sway = Math.sin(t / 90 + w.home / 40) * 1.2
+    for (let i = 0; i < 7; i++) {
+      const lx = trunk + side * (i % 3 - 1) * 11 + sway
+      const ly = y - 37 - Math.floor(i / 3) * 9 + (i % 2) * 3
+      ctx.fillStyle = ['rgba(28,75,42,0.70)', 'rgba(43,105,54,0.68)', 'rgba(81,130,61,0.62)'][i % 3]
+      ctx.beginPath()
+      ctx.ellipse(lx, ly, 15 + i % 2 * 4, 8 + i % 3, 0, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    // Layered tapered limbs attach the perch to a trunk, rather than floating.
+    ctx.strokeStyle = '#49331e'
+    ctx.lineWidth = 11
+    ctx.beginPath()
+    ctx.moveTo(trunk + side * 3, y + 82)
+    ctx.quadraticCurveTo(trunk - side * 2, y + 12, trunk, y - 50)
+    ctx.stroke()
+    ctx.strokeStyle = '#72502c'
+    ctx.lineWidth = 7
+    ctx.beginPath()
+    ctx.moveTo(trunk + side, y + 72)
+    ctx.quadraticCurveTo(trunk - side, y + 9, trunk, y - 48)
+    ctx.stroke()
+    ctx.strokeStyle = '#49331e'
+    ctx.lineWidth = 6
+    ctx.beginPath()
+    ctx.moveTo(trunk, y - 12)
+    ctx.quadraticCurveTo(x + side * 24, y + 3, x - side * 20, y + 1)
+    ctx.stroke()
+    ctx.strokeStyle = '#a37843'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(trunk, y - 14)
+    ctx.quadraticCurveTo(x + side * 24, y, x - side * 20, y - 1)
+    ctx.stroke()
+    ctx.restore()
+  }
+}
+
+/** A realistic monkey sits on its branch and watches the approaching player. */
 function drawMonkey(ctx, w, t, player) {
   const x = Math.round(w.x + w.w / 2)
   const y = Math.round(w.y + w.h)
-  const flip = w.vx < 0 ? -1 : 1
-  const sway = Math.sin(t / 10 + w.home / 20)
+  const warning = w.throwWindup > 0
+  const flip = (w.dir || (player.x < w.x ? -1 : 1)) < 0 ? 1 : -1
+  const monkey = getArtwork('monkey', 'png')
   ctx.save()
   ctx.translate(x, y)
   ctx.scale(flip, 1)
-  ctx.lineCap = 'round'
-  // A curved, moving tail makes them recognisable against the foliage.
-  ctx.strokeStyle = '#542637'
-  ctx.lineWidth = 2.5
-  ctx.beginPath()
-  ctx.moveTo(-4, -5)
-  ctx.bezierCurveTo(-10, -2, -12, -9 - sway, -8, -11 - sway)
-  ctx.stroke()
-  ctx.fillStyle = '#71333b'
-  ctx.beginPath()
-  ctx.ellipse(0, -5, 5.2, 5, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#bd7652'
-  ctx.beginPath()
-  ctx.ellipse(1, -5, 2.6, 3, 0, 0, Math.PI * 2)
-  ctx.fill()
-  // Feet and a waving arm show the attack even at the game's small scale.
-  ctx.strokeStyle = '#512334'
-  ctx.lineWidth = 2.5
-  ctx.beginPath()
-  ctx.moveTo(-2, -2); ctx.lineTo(-4 + sway, -0.5)
-  ctx.moveTo(2, -2); ctx.lineTo(4 - sway, -0.5)
-  ctx.moveTo(3, -7); ctx.lineTo(6, -9 + sway)
-  ctx.stroke()
-  ctx.fillStyle = '#71333b'
-  ctx.beginPath()
-  ctx.arc(-4, -12, 2.5, 0, Math.PI * 2)
-  ctx.arc(4, -12, 2.5, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.beginPath()
-  ctx.ellipse(0, -12, 5.3, 4.8, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#e8ae78'
-  ctx.beginPath()
-  ctx.ellipse(1, -11, 3.5, 2.6, 0, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = '#2b1e27'
-  ctx.fillRect(1, -13, 1, 1)
-  ctx.fillRect(4, -12, 1, 1)
-  ctx.fillStyle = '#fff3d0'
-  ctx.fillRect(1, -13, 1, 1)
+  if (monkey) {
+    // A subtle breathing motion keeps the seated animal alive without making
+    // its feet slide along the branch. Windup leans towards the target.
+    const height = 29
+    const width = height * monkey.naturalWidth / monkey.naturalHeight
+    const breathing = Math.sin(t / 24 + w.home / 30) * 0.35
+    ctx.imageSmoothingEnabled = true
+    ctx.rotate(warning ? -0.055 * Math.sin((29 - w.throwWindup) / 28 * Math.PI) : 0)
+    ctx.drawImage(monkey, -width / 2, -height - breathing, width, height + breathing)
+  } else {
+    // Fallback remains visible and seated if the optional artwork fails to load.
+    ctx.scale(-1, 1)
+    ctx.strokeStyle = '#573a28'
+    ctx.lineWidth = 3
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(-5, -4); ctx.bezierCurveTo(-14, 0, -14, -12, -8, -14)
+    ctx.stroke()
+    ctx.fillStyle = '#6d5038'
+    ctx.beginPath(); ctx.ellipse(0, -7, 6, 7, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(1, -16, 5, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#c4a178'
+    ctx.beginPath(); ctx.ellipse(3, -15, 3, 2.5, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#251b15'; ctx.fillRect(3, -17, 1, 1)
+  }
   ctx.restore()
-  if (w.throwCooldown <= 30 && Math.abs(player.x - w.x) < 190 && Math.abs(player.y - w.y) < 100) {
-    // A high-contrast warning precedes the projectile for roughly half a second.
+  if (warning) {
+    // A high-contrast warning precedes the banana, outside the silhouette.
     ctx.fillStyle = '#56282a'
-    ctx.fillRect(x - 3, y - 24, 7, 9)
+    ctx.fillRect(x - 3, y - 39, 7, 9)
     ctx.fillStyle = Math.floor(t / 5) % 2 ? '#fff7cb' : '#ffd143'
-    ctx.fillRect(x - 2, y - 23, 5, 7)
+    ctx.fillRect(x - 2, y - 38, 5, 7)
     ctx.fillStyle = '#793327'
-    ctx.fillRect(x, y - 22, 1, 3)
-    ctx.fillRect(x, y - 18, 1, 1)
+    ctx.fillRect(x, y - 37, 1, 3)
+    ctx.fillRect(x, y - 33, 1, 1)
   }
 }
 
@@ -695,6 +732,7 @@ export function draw(ctx, state, cam, t, fx = null) {
 
   ctx.save()
   ctx.translate(-Math.round(cam.x), -Math.round(cam.y))
+  if (state.adventure === 'sky') monkeyTrees(ctx, state, cam, t)
   terrain(ctx, state, cam)
   chips(ctx, state, cam, t)
   spikes(ctx, state, cam, t)
